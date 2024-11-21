@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.commons.exec.DefaultExecutorTest
+-------------------------------------------------------------------------------
+Tests run: 32, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 42.33 s -- in org.apache.commons.exec.DefaultExecutorTest

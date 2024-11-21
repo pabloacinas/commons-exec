@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OpenVmsProcessingEnvironment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Exec</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.exec.environment</a> &gt; <span class="el_source">OpenVmsProcessingEnvironment.java</span></div><h1>OpenVmsProcessingEnvironment.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.exec.environment;
+
+//import java.io.BufferedReader;
+//import java.io.IOException;
+//import java.util.HashMap;
+//import java.util.Map;
+//
+//import org.apache.commons.exec.CommandLine;
+
+/**
+ * Helper class to determine the environment variable for VMS.
+ *
+ * @deprecated No longer needed.
+ */
+@Deprecated
+<span class="nc" id="L33">public class OpenVmsProcessingEnvironment extends DefaultProcessingEnvironment {</span>
+
+    /*
+     * Hopefully removing super-class overrides won't cause Clirr error. If necessary can just delegate to super-class.
+     */
+
+//    /**
+//     * Find the list of environment variables for this process.
+//     *
+//     * @return a map containing the environment variables
+//     * @throws IOException the operation failed
+//     */
+//    @Override
+//    protected Map&lt;String, String&gt; createProcEnvironment() throws IOException {
+//        if (procEnvironment == null) {
+//            final BufferedReader in = runProcEnvCommand();
+//            procEnvironment = addVMSenvironmentVariables(new HashMap&lt;String, String&gt;(), in);
+//        }
+//
+//        return procEnvironment;
+//    }
+//
+//    /**
+//     * Determine the OS specific command line to get a list of environment
+//     * variables.
+//     *
+//     * @return the command line
+//     */
+//    @Override
+//    protected CommandLine getProcEnvCommand() {
+//        final CommandLine commandLine = new CommandLine(&quot;show&quot;);
+//        commandLine.addArgument(&quot;symbol/global&quot;); // the parser assumes symbols are global
+//        commandLine.addArgument(&quot;*&quot;);
+//        return commandLine;
+//    }
+//
+//    /**
+//     * This method is VMS specific and used by getProcEnvironment(). Parses VMS
+//     * symbols from {@code in} and adds them to {@code environment}.
+//     * {@code in} is expected to be the output of &quot;SHOW SYMBOL/GLOBAL *&quot;.
+//     *
+//     * @param environment the current environment
+//     * @param in the reader from the process to determine VMS env variables
+//     * @return the updated environment
+//     * @throws IOException operation failed
+//     */
+//    private Map&lt;String, String&gt; addVMSenvironmentVariables(final Map&lt;String, String&gt; environment,
+//            final BufferedReader in) throws IOException {
+//        String line;
+//        while ((line = in.readLine()) != null) {
+//            final String SEP = &quot;==&quot;; // global symbol separator
+//            final int sepidx = line.indexOf(SEP);
+//            if (sepidx &gt; 0) {
+//                final String name = line.substring(0, sepidx).trim();
+//                String value = line.substring(sepidx+SEP.length()).trim();
+//                value = value.substring(1,value.length()-1); // drop enclosing quotes
+//                environment.put(name,value);
+//            }
+//        }
+//        return environment;
+//    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

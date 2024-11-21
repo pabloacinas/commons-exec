@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OS.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Exec</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.exec</a> &gt; <span class="el_source">OS.java</span></div><h1>OS.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.exec;
+
+import java.io.File;
+import java.util.Locale;
+
+/**
+ * Condition that tests the OS type.
+ *
+ * Copied and adapted from Apache Ant 1.9.6 from org.apache.tools.ant.taskdefs.condition.OS.
+ */
+public final class OS {
+
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_9X = &quot;win9x&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_DOS = &quot;dos&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_MAC = &quot;mac&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_NETWARE = &quot;netware&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_NT = &quot;winnt&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_OS2 = &quot;os/2&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_OS400 = &quot;os/400&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_TANDEM = &quot;tandem&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_UNIX = &quot;unix&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_VMS = &quot;openvms&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_WINDOWS = &quot;windows&quot;;
+    /**
+     * OS family that can be tested for. {@value}
+     */
+    public static final String FAMILY_ZOS = &quot;z/os&quot;;
+
+    private static final String DARWIN = &quot;darwin&quot;;
+
+<span class="fc" id="L80">    private static final String OS_NAME = System.getProperty(&quot;os.name&quot;).toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L81">    private static final String OS_ARCH = System.getProperty(&quot;os.arch&quot;).toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L82">    private static final String OS_VERSION = System.getProperty(&quot;os.version&quot;).toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L83">    private static final String PATH_SEP = File.pathSeparator;</span>
+
+    /**
+     * Tests whether the OS on which commons-exec is executing matches the given OS architecture.
+     *
+     * @param arch the OS architecture to check for.
+     * @return whether if the OS matches.
+     */
+    public static boolean isArch(final String arch) {
+<span class="nc" id="L92">        return isOs(null, null, arch, null);</span>
+    }
+
+    /**
+     * Tests whether the OS on which commons-exec is executing matches the given OS family.
+     *
+     * @param family the family to check for.
+     * @return whether if the OS matches.
+     */
+    private static boolean isFamily(final String family) {
+<span class="fc" id="L102">        return isOs(family, null, null, null);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the DOS family.
+     *
+     * @return whether the OS is in the DOS family.
+     */
+    public static boolean isFamilyDOS() {
+<span class="nc" id="L111">        return isFamily(FAMILY_DOS);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the Mac family.
+     *
+     * @return whether the OS is in the Mac family.
+     */
+    public static boolean isFamilyMac() {
+<span class="nc" id="L120">        return isFamily(FAMILY_MAC);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the Netware family.
+     *
+     * @return whether the OS is in the Netware family.
+     */
+    public static boolean isFamilyNetware() {
+<span class="nc" id="L129">        return isFamily(FAMILY_NETWARE);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the OpenVMS family.
+     *
+     * @return whether the OS is in the OpenVMS family.
+     */
+    public static boolean isFamilyOpenVms() {
+<span class="fc" id="L138">        return isFamily(FAMILY_VMS);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the OS/2 family.
+     *
+     * @return whether the OS is in the OS/2 family.
+     */
+    public static boolean isFamilyOS2() {
+<span class="nc" id="L147">        return isFamily(FAMILY_OS2);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the OS/400 family.
+     *
+     * @return whether the OS is in the OS/400 family.
+     */
+    public static boolean isFamilyOS400() {
+<span class="nc" id="L156">        return isFamily(FAMILY_OS400);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the Tandem family.
+     *
+     * @return whether the OS is in the Tandem family.
+     */
+    public static boolean isFamilyTandem() {
+<span class="nc" id="L165">        return isFamily(FAMILY_TANDEM);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the UNIX family.
+     *
+     * @return whether the OS is in the UNIX family.
+     */
+    public static boolean isFamilyUnix() {
+<span class="fc" id="L174">        return isFamily(FAMILY_UNIX);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the Windows 9x family.
+     *
+     * @return whether the OS is in the Windows 9x family.
+     */
+    public static boolean isFamilyWin9x() {
+<span class="nc" id="L183">        return isFamily(FAMILY_9X);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the Windows family.
+     *
+     * @return whether the OS is in the Windows family.
+     */
+    public static boolean isFamilyWindows() {
+<span class="fc" id="L192">        return isFamily(FAMILY_WINDOWS);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the Windows NT family.
+     *
+     * @return whether the OS is in the Windows NT family.
+     */
+    public static boolean isFamilyWinNT() {
+<span class="nc" id="L201">        return isFamily(FAMILY_NT);</span>
+    }
+
+    /**
+     * Tests whether the OS is in the z/OS family.
+     *
+     * @return whether the OS is in the z/OS family.
+     */
+    public static boolean isFamilyZOS() {
+<span class="nc" id="L210">        return isFamily(FAMILY_ZOS);</span>
+    }
+
+    /**
+     * Tests whether if the OS on which commons-exec is executing matches the given OS name.
+     *
+     * @param name the OS name to check for.
+     * @return whether the OS matches.
+     */
+    public static boolean isName(final String name) {
+<span class="nc" id="L220">        return isOs(null, name, null, null);</span>
+    }
+
+    /**
+     * Tests whether the OS on which commons-exec is executing matches the given OS family, name, architecture and version.
+     *
+     * @param family  The OS family.
+     * @param name    The OS name.
+     * @param arch    The OS architecture.
+     * @param version The OS version.
+     * @return whether the OS matches.
+     */
+    public static boolean isOs(final String family, final String name, final String arch, final String version) {
+<span class="fc" id="L233">        boolean retValue = false;</span>
+<span class="pc bpc" id="L234" title="7 of 8 branches missed.">        if (family != null || name != null || arch != null || version != null) {</span>
+<span class="fc" id="L235">            boolean isFamily = true;</span>
+<span class="fc" id="L236">            boolean isName = true;</span>
+<span class="fc" id="L237">            boolean isArch = true;</span>
+<span class="fc" id="L238">            boolean isVersion = true;</span>
+<span class="pc bpc" id="L239" title="1 of 2 branches missed.">            if (family != null) {</span>
+                // Windows probing logic relies on the word 'windows' in the OS
+<span class="fc" id="L241">                final boolean isWindows = OS_NAME.contains(FAMILY_WINDOWS);</span>
+<span class="fc" id="L242">                boolean is9x = false;</span>
+<span class="fc" id="L243">                boolean isNT = false;</span>
+<span class="pc bpc" id="L244" title="1 of 2 branches missed.">                if (isWindows) {</span>
+                    // there are only four 9x platforms that we look for
+<span class="pc bpc" id="L246" title="3 of 6 branches missed.">                    is9x = OS_NAME.contains(&quot;95&quot;) || OS_NAME.contains(&quot;98&quot;) || OS_NAME.contains(&quot;me&quot;)</span>
+                    // Windows CE isn't really 9x, but crippled enough to
+                    // be a muchness. Ant doesn't run on CE, anyway.
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">                            || OS_NAME.contains(&quot;ce&quot;);</span>
+<span class="pc bpc" id="L250" title="1 of 2 branches missed.">                    isNT = !is9x;</span>
+                }
+<span class="pc bpc" id="L252" title="10 of 13 branches missed.">                switch (family) {</span>
+                case FAMILY_WINDOWS:
+<span class="fc" id="L254">                    isFamily = isWindows;</span>
+<span class="fc" id="L255">                    break;</span>
+                case FAMILY_9X:
+<span class="nc bnc" id="L257" title="All 4 branches missed.">                    isFamily = isWindows &amp;&amp; is9x;</span>
+<span class="nc" id="L258">                    break;</span>
+                case FAMILY_NT:
+<span class="nc bnc" id="L260" title="All 4 branches missed.">                    isFamily = isWindows &amp;&amp; isNT;</span>
+<span class="nc" id="L261">                    break;</span>
+                case FAMILY_OS2:
+<span class="nc" id="L263">                    isFamily = OS_NAME.contains(FAMILY_OS2);</span>
+<span class="nc" id="L264">                    break;</span>
+                case FAMILY_NETWARE:
+<span class="nc" id="L266">                    isFamily = OS_NAME.contains(FAMILY_NETWARE);</span>
+<span class="nc" id="L267">                    break;</span>
+                case FAMILY_DOS:
+<span class="nc bnc" id="L269" title="All 4 branches missed.">                    isFamily = PATH_SEP.equals(&quot;;&quot;) &amp;&amp; !isFamily(FAMILY_NETWARE);</span>
+<span class="nc" id="L270">                    break;</span>
+                case FAMILY_MAC:
+<span class="nc bnc" id="L272" title="All 4 branches missed.">                    isFamily = OS_NAME.contains(FAMILY_MAC) || OS_NAME.contains(DARWIN);</span>
+<span class="nc" id="L273">                    break;</span>
+                case FAMILY_TANDEM:
+<span class="nc" id="L275">                    isFamily = OS_NAME.contains(&quot;nonstop_kernel&quot;);</span>
+<span class="nc" id="L276">                    break;</span>
+                case FAMILY_UNIX:
+<span class="pc bpc" id="L278" title="9 of 10 branches missed.">                    isFamily = PATH_SEP.equals(&quot;:&quot;) &amp;&amp; !isFamily(FAMILY_VMS) &amp;&amp; (!isFamily(FAMILY_MAC) || OS_NAME.endsWith(&quot;x&quot;) || OS_NAME.contains(DARWIN));</span>
+<span class="fc" id="L279">                    break;</span>
+                case FAMILY_ZOS:
+<span class="nc bnc" id="L281" title="All 4 branches missed.">                    isFamily = OS_NAME.contains(FAMILY_ZOS) || OS_NAME.contains(&quot;os/390&quot;);</span>
+<span class="nc" id="L282">                    break;</span>
+                case FAMILY_OS400:
+<span class="nc" id="L284">                    isFamily = OS_NAME.contains(FAMILY_OS400);</span>
+<span class="nc" id="L285">                    break;</span>
+                case FAMILY_VMS:
+<span class="fc" id="L287">                    isFamily = OS_NAME.contains(FAMILY_VMS);</span>
+<span class="fc" id="L288">                    break;</span>
+                default:
+<span class="nc" id="L290">                    throw new IllegalArgumentException(&quot;Don\'t know how to detect OS family \&quot;&quot; + family + &quot;\&quot;&quot;);</span>
+                }
+            }
+<span class="pc bpc" id="L293" title="1 of 2 branches missed.">            if (name != null) {</span>
+<span class="nc" id="L294">                isName = name.equals(OS_NAME);</span>
+            }
+<span class="pc bpc" id="L296" title="1 of 2 branches missed.">            if (arch != null) {</span>
+<span class="nc" id="L297">                isArch = arch.equals(OS_ARCH);</span>
+            }
+<span class="pc bpc" id="L299" title="1 of 2 branches missed.">            if (version != null) {</span>
+<span class="nc" id="L300">                isVersion = version.equals(OS_VERSION);</span>
+            }
+<span class="pc bpc" id="L302" title="3 of 8 branches missed.">            retValue = isFamily &amp;&amp; isName &amp;&amp; isArch &amp;&amp; isVersion;</span>
+        }
+<span class="fc" id="L304">        return retValue;</span>
+    }
+
+    /**
+     * Tests whether the OS on which commonss-exec is executing matches the given OS version.
+     *
+     * @param version the OS version to check for.
+     * @return whether if the OS matches.
+     */
+    public static boolean isVersion(final String version) {
+<span class="nc" id="L314">        return isOs(null, null, null, version);</span>
+    }
+
+    /**
+     * Avoids instances.
+     */
+    private OS() {
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

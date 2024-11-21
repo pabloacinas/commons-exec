@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LogOutputStream.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Exec</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.exec</a> &gt; <span class="el_source">LogOutputStream.java</span></div><h1>LogOutputStream.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the &quot;License&quot;); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.apache.commons.exec;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
+
+/**
+ * Base class to connect a logging system to the output and/or error stream of then external process. The implementation parses the incoming data to construct a
+ * line and passes the complete line to an user-defined implementation.
+ */
+public abstract class LogOutputStream extends OutputStream {
+
+    private static final class ByteArrayOutputStreamX extends ByteArrayOutputStream {
+        private ByteArrayOutputStreamX(final int size) {
+<span class="fc" id="L33">            super(size);</span>
+<span class="fc" id="L34">        }</span>
+
+        public synchronized String toString(final Charset charset) {
+<span class="fc" id="L37">            return new String(buf, 0, count, charset);</span>
+        }
+    }
+
+    /** Initial buffer size. */
+    private static final int INTIAL_SIZE = 132;
+
+    /** Carriage return. */
+    private static final int CR = 0x0d;
+
+    /** Line-feed. */
+    private static final int LF = 0x0a;
+
+    /** The internal buffer. */
+<span class="fc" id="L51">    private final ByteArrayOutputStreamX buffer = new ByteArrayOutputStreamX(INTIAL_SIZE);</span>
+
+    private boolean skip;
+
+    private final int level;
+
+    private final Charset charset;
+
+    /**
+     * Creates a new instance of this class. Uses the default level of 999.
+     */
+    public LogOutputStream() {
+<span class="nc" id="L63">        this(999);</span>
+<span class="nc" id="L64">    }</span>
+
+    /**
+     * Creates a new instance of this class.
+     *
+     * @param level level used to log data written to this stream.
+     */
+    public LogOutputStream(final int level) {
+<span class="fc" id="L72">        this(level, null);</span>
+<span class="fc" id="L73">    }</span>
+
+    /**
+     * Creates a new instance of this class, specifying the character set that should be used for outputting the string for each line
+     *
+     * @param level   level used to log data written to this stream.
+     * @param charset Character Set to use when processing lines.
+     */
+<span class="fc" id="L81">    public LogOutputStream(final int level, final Charset charset) {</span>
+<span class="fc" id="L82">        this.level = level;</span>
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">        this.charset = charset == null ? Charset.defaultCharset() : charset;</span>
+<span class="fc" id="L84">    }</span>
+
+    /**
+     * Writes all remaining data from the buffer.
+     *
+     * @see OutputStream#close()
+     */
+    @Override
+    public void close() throws IOException {
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">        if (buffer.size() &gt; 0) {</span>
+<span class="nc" id="L94">            processBuffer();</span>
+        }
+<span class="fc" id="L96">        super.close();</span>
+<span class="fc" id="L97">    }</span>
+
+    /**
+     * Flushes this log stream.
+     *
+     * @see OutputStream#flush()
+     */
+    @Override
+    public void flush() {
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (buffer.size() &gt; 0) {</span>
+<span class="nc" id="L107">            processBuffer();</span>
+        }
+<span class="fc" id="L109">    }</span>
+
+    /**
+     * Gets the trace level of the log system.
+     *
+     * @return the trace level of the log system.
+     */
+    public int getMessageLevel() {
+<span class="nc" id="L117">        return level;</span>
+    }
+
+    /**
+     * Converts the buffer to a string and sends it to {@code processLine}.
+     */
+    protected void processBuffer() {
+<span class="fc" id="L124">        processLine(buffer.toString(charset));</span>
+<span class="fc" id="L125">        buffer.reset();</span>
+<span class="fc" id="L126">    }</span>
+
+    /**
+     * Logs a line to the log system of the user.
+     *
+     * @param line the line to log.
+     */
+    protected void processLine(final String line) {
+<span class="fc" id="L134">        processLine(line, level);</span>
+<span class="fc" id="L135">    }</span>
+
+    /**
+     * Logs a line to the log system of the user.
+     *
+     * @param line     the line to log.
+     * @param logLevel the log level to use
+     */
+    protected abstract void processLine(final String line, final int logLevel);
+
+    /**
+     * Writes a block of characters to the output stream.
+     *
+     * @param b   the array containing the data.
+     * @param off the offset into the array where data starts.
+     * @param len the length of block.
+     * @throws IOException if the data cannot be written into the stream.
+     * @see OutputStream#write(byte[], int, int)
+     */
+    @Override
+    public void write(final byte[] b, final int off, final int len) throws IOException {
+        // find the line breaks and pass other chars through in blocks
+<span class="fc" id="L157">        int offset = off;</span>
+<span class="fc" id="L158">        int blockStartOffset = offset;</span>
+<span class="fc" id="L159">        int remaining = len;</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">        while (remaining &gt; 0) {</span>
+<span class="pc bpc" id="L161" title="1 of 6 branches missed.">            while (remaining &gt; 0 &amp;&amp; b[offset] != LF &amp;&amp; b[offset] != CR) {</span>
+<span class="fc" id="L162">                offset++;</span>
+<span class="fc" id="L163">                remaining--;</span>
+            }
+            // either end of buffer or a line separator char
+<span class="fc" id="L166">            final int blockLength = offset - blockStartOffset;</span>
+<span class="pc bpc" id="L167" title="1 of 2 branches missed.">            if (blockLength &gt; 0) {</span>
+<span class="fc" id="L168">                buffer.write(b, blockStartOffset, blockLength);</span>
+            }
+<span class="fc bfc" id="L170" title="All 6 branches covered.">            while (remaining &gt; 0 &amp;&amp; (b[offset] == LF || b[offset] == CR)) {</span>
+<span class="fc" id="L171">                write(b[offset]);</span>
+<span class="fc" id="L172">                offset++;</span>
+<span class="fc" id="L173">                remaining--;</span>
+            }
+<span class="fc" id="L175">            blockStartOffset = offset;</span>
+<span class="fc" id="L176">        }</span>
+<span class="fc" id="L177">    }</span>
+
+    /**
+     * Writes the data to the buffer and flush the buffer, if a line separator is detected.
+     *
+     * @param cc data to log (byte).
+     * @see OutputStream#write(int)
+     */
+    @Override
+    public void write(final int cc) throws IOException {
+<span class="fc" id="L187">        final byte c = (byte) cc;</span>
+<span class="pc bpc" id="L188" title="1 of 4 branches missed.">        if (c == '\n' || c == '\r') {</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">            if (!skip) {</span>
+<span class="fc" id="L190">                processBuffer();</span>
+            }
+        } else {
+<span class="nc" id="L193">            buffer.write(cc);</span>
+        }
+<span class="fc bfc" id="L195" title="All 2 branches covered.">        skip = c == '\r';</span>
+<span class="fc" id="L196">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

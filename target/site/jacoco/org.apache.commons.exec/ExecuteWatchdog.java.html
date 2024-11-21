@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExecuteWatchdog.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Exec</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.exec</a> &gt; <span class="el_source">ExecuteWatchdog.java</span></div><h1>ExecuteWatchdog.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the &quot;License&quot;); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.apache.commons.exec;
+
+import java.time.Duration;
+import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.function.Supplier;
+
+import org.apache.commons.exec.util.DebugUtils;
+
+/**
+ * Destroys a process running for too long. For example:
+ *
+ * &lt;pre&gt;
+ * ExecuteWatchdog watchdog = ExecuteWatchdog.builder().setTimeout(Duration.ofSeconds(30)).get();
+ * Executor executor = DefaultExecutor.builder().setExecuteStreamHandler(new PumpStreamHandler()).get();
+ * executor.setWatchdog(watchdog);
+ * int exitValue = executor.execute(myCommandLine);
+ * if (executor.isFailure(exitValue) &amp;amp;&amp;amp; watchdog.killedProcess()) {
+ *     // it was killed on purpose by the watchdog
+ * }
+ * &lt;/pre&gt;
+ * &lt;p&gt;
+ * When starting an asynchronous process than 'ExecuteWatchdog' is the keeper of the process handle. In some cases it is useful not to define a timeout (and
+ * pass {@link #INFINITE_TIMEOUT_DURATION}) and to kill the process explicitly using {@link #destroyProcess()}.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * Please note that ExecuteWatchdog is processed asynchronously, e.g. it might be still attached to a process even after the
+ * {@link DefaultExecutor#execute(CommandLine)} or a variation has returned.
+ * &lt;/p&gt;
+ *
+ * @see Executor
+ * @see Watchdog
+ */
+public class ExecuteWatchdog implements TimeoutObserver {
+
+    /**
+     * Builds ExecuteWatchdog instances.
+     *
+     * @since 1.4.0
+     */
+<span class="fc" id="L59">    public static final class Builder implements Supplier&lt;ExecuteWatchdog&gt; {</span>
+
+        private ThreadFactory threadFactory;
+        private Duration timeout;
+
+        /**
+         * Creates a new configured ExecuteWatchdog.
+         *
+         * @return a new configured ExecuteWatchdog.
+         */
+        @Override
+        public ExecuteWatchdog get() {
+<span class="fc" id="L71">            return new ExecuteWatchdog(threadFactory, timeout);</span>
+        }
+
+        /**
+         * Sets the thread factory.
+         *
+         * @param threadFactory the thread factory.
+         * @return {@code this} instance.
+         */
+        public Builder setThreadFactory(final ThreadFactory threadFactory) {
+<span class="nc" id="L81">            this.threadFactory = threadFactory;</span>
+<span class="nc" id="L82">            return this;</span>
+        }
+
+        /**
+         * Sets the timeout duration.
+         *
+         * @param timeout the timeout duration.
+         * @return {@code this} instance.
+         */
+        public Builder setTimeout(final Duration timeout) {
+<span class="fc" id="L92">            this.timeout = timeout;</span>
+<span class="fc" id="L93">            return this;</span>
+        }
+
+    }
+
+    /** The marker for an infinite timeout. */
+    public static final long INFINITE_TIMEOUT = -1;
+
+    /** The marker for an infinite timeout. */
+<span class="fc" id="L102">    public static final Duration INFINITE_TIMEOUT_DURATION = Duration.ofMillis(INFINITE_TIMEOUT);</span>
+
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder.
+     * @since 1.4.0
+     */
+    public static Builder builder() {
+<span class="fc" id="L111">        return new Builder();</span>
+    }
+
+    /** The process to execute and watch for duration. */
+    private Process process;
+
+    /** Is a user-supplied timeout in use. */
+    private final boolean hasWatchdog;
+
+    /** Say whether or not the watchdog is currently monitoring a process. */
+    private boolean watch;
+
+    /** Exception that might be thrown during the process execution. */
+    private Exception caught;
+
+    /** Say whether or not the process was killed due to running overtime. */
+    private boolean killedProcess;
+
+    /** Will tell us whether timeout has occurred. */
+    private final Watchdog watchdog;
+
+    /** Indicates that the process is verified as started */
+    private volatile boolean processStarted;
+
+    /**
+     * The thread factory.
+     */
+    private final ThreadFactory threadFactory;
+
+    /**
+     * Creates a new watchdog with a given timeout.
+     *
+     * @param timeoutMillis the timeout for the process in milliseconds. It must be greater than 0 or {@code INFINITE_TIMEOUT}.
+     * @deprecated Use {@link Builder#get()}.
+     */
+    @Deprecated
+    public ExecuteWatchdog(final long timeoutMillis) {
+<span class="fc" id="L148">        this(Executors.defaultThreadFactory(), Duration.ofMillis(timeoutMillis));</span>
+<span class="fc" id="L149">    }</span>
+
+    /**
+     * Creates a new watchdog with a given timeout.
+     *
+     * @param threadFactory the thread factory.
+     * @param timeout       the timeout Duration for the process. It must be greater than 0 or {@code INFINITE_TIMEOUT_DURATION}.
+     */
+<span class="fc" id="L157">    private ExecuteWatchdog(final ThreadFactory threadFactory, final Duration timeout) {</span>
+<span class="fc" id="L158">        this.killedProcess = false;</span>
+<span class="fc" id="L159">        this.watch = false;</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">        this.hasWatchdog = !INFINITE_TIMEOUT_DURATION.equals(timeout);</span>
+<span class="fc" id="L161">        this.processStarted = false;</span>
+<span class="fc bfc" id="L162" title="All 2 branches covered.">        this.threadFactory = threadFactory != null ? threadFactory : Executors.defaultThreadFactory();</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        if (this.hasWatchdog) {</span>
+<span class="fc" id="L164">            this.watchdog = Watchdog.builder().setThreadFactory(this.threadFactory).setTimeout(timeout).get();</span>
+<span class="fc" id="L165">            this.watchdog.addTimeoutObserver(this);</span>
+        } else {
+<span class="fc" id="L167">            this.watchdog = null;</span>
+        }
+<span class="fc" id="L169">    }</span>
+
+    /**
+     * This method will rethrow the exception that was possibly caught during the run of the process. It will only remains valid once the process has been
+     * terminated either by 'error', timeout or manual intervention. Information will be discarded once a new process is ran.
+     *
+     * @throws Exception a wrapped exception over the one that was silently swallowed and stored during the process run.
+     */
+    public synchronized void checkException() throws Exception {
+<span class="pc bpc" id="L178" title="1 of 2 branches missed.">        if (caught != null) {</span>
+<span class="nc" id="L179">            throw caught;</span>
+        }
+<span class="fc" id="L181">    }</span>
+
+    /**
+     * reset the monitor flag and the process.
+     */
+    protected synchronized void cleanUp() {
+<span class="fc" id="L187">        watch = false;</span>
+<span class="fc" id="L188">        process = null;</span>
+<span class="fc" id="L189">    }</span>
+
+    /**
+     * Destroys the running process manually.
+     */
+    public synchronized void destroyProcess() {
+<span class="fc" id="L195">        ensureStarted();</span>
+<span class="fc" id="L196">        timeoutOccured(null);</span>
+<span class="fc" id="L197">        stop();</span>
+<span class="fc" id="L198">    }</span>
+
+    /**
+     * Ensures that the process is started or not already terminated so we do not race with asynch executionor hang forever. The caller of this method must be
+     * holding the lock on this.
+     */
+    private void ensureStarted() {
+<span class="pc bpc" id="L205" title="1 of 4 branches missed.">        while (!processStarted &amp;&amp; caught == null) {</span>
+            try {
+<span class="fc" id="L207">                wait();</span>
+<span class="nc" id="L208">            } catch (final InterruptedException e) {</span>
+<span class="nc" id="L209">                throw new IllegalStateException(e.getMessage(), e);</span>
+<span class="fc" id="L210">            }</span>
+        }
+<span class="fc" id="L212">    }</span>
+
+    /**
+     * Notification that starting the process failed.
+     *
+     * @param e the offending exception.
+     */
+    public synchronized void failedToStart(final Exception e) {
+<span class="fc" id="L220">        processStarted = true;</span>
+<span class="fc" id="L221">        caught = e;</span>
+<span class="fc" id="L222">        notifyAll();</span>
+<span class="fc" id="L223">    }</span>
+
+    /**
+     * Indicates whether or not the watchdog is still monitoring the process.
+     *
+     * @return {@code true} if the process is still running, otherwise {@code false}.
+     */
+    public synchronized boolean isWatching() {
+<span class="fc" id="L231">        ensureStarted();</span>
+<span class="fc" id="L232">        return watch;</span>
+    }
+
+    /**
+     * Indicates whether the last process run was killed.
+     *
+     * @return {@code true} if the process was killed {@code false}.
+     */
+    public synchronized boolean killedProcess() {
+<span class="fc" id="L241">        return killedProcess;</span>
+    }
+
+    void setProcessNotStarted() {
+<span class="fc" id="L245">        processStarted = false;</span>
+<span class="fc" id="L246">    }</span>
+
+    /**
+     * Watches the given process and terminates it, if it runs for too long. All information from the previous run are reset.
+     *
+     * @param processToMonitor the process to monitor. It cannot be {@code null}.
+     * @throws IllegalStateException if a process is still being monitored.
+     */
+    public synchronized void start(final Process processToMonitor) {
+<span class="fc" id="L255">        Objects.requireNonNull(processToMonitor, &quot;processToMonitor&quot;);</span>
+<span class="pc bpc" id="L256" title="1 of 2 branches missed.">        if (process != null) {</span>
+<span class="nc" id="L257">            throw new IllegalStateException(&quot;Already running.&quot;);</span>
+        }
+<span class="fc" id="L259">        caught = null;</span>
+<span class="fc" id="L260">        killedProcess = false;</span>
+<span class="fc" id="L261">        watch = true;</span>
+<span class="fc" id="L262">        process = processToMonitor;</span>
+<span class="fc" id="L263">        processStarted = true;</span>
+<span class="fc" id="L264">        notifyAll();</span>
+<span class="fc bfc" id="L265" title="All 2 branches covered.">        if (hasWatchdog) {</span>
+<span class="fc" id="L266">            watchdog.start();</span>
+        }
+<span class="fc" id="L268">    }</span>
+
+    /**
+     * Stops the watcher. It will notify all threads possibly waiting on this object.
+     */
+    public synchronized void stop() {
+<span class="fc bfc" id="L274" title="All 2 branches covered.">        if (hasWatchdog) {</span>
+<span class="fc" id="L275">            watchdog.stop();</span>
+        }
+<span class="fc" id="L277">        watch = false;</span>
+<span class="fc" id="L278">        process = null;</span>
+<span class="fc" id="L279">    }</span>
+
+    /**
+     * Called after watchdog has finished.
+     */
+    @Override
+    public synchronized void timeoutOccured(final Watchdog w) {
+        try {
+            try {
+                // We must check if the process was not stopped
+                // before being here
+<span class="fc bfc" id="L290" title="All 2 branches covered.">                if (process != null) {</span>
+<span class="nc" id="L291">                    process.exitValue();</span>
+                }
+<span class="fc" id="L293">            } catch (final IllegalThreadStateException itse) {</span>
+                // the process is not terminated, if this is really
+                // a timeout and not a manual stop then destroy it.
+<span class="pc bpc" id="L296" title="1 of 2 branches missed.">                if (watch) {</span>
+<span class="fc" id="L297">                    killedProcess = true;</span>
+<span class="fc" id="L298">                    process.destroy();</span>
+                }
+<span class="fc" id="L300">            }</span>
+<span class="nc" id="L301">        } catch (final Exception e) {</span>
+<span class="nc" id="L302">            caught = e;</span>
+<span class="nc" id="L303">            DebugUtils.handleException(&quot;Getting the exit value of the process failed&quot;, e);</span>
+        } finally {
+<span class="fc" id="L305">            cleanUp();</span>
+        }
+<span class="fc" id="L307">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

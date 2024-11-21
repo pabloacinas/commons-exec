@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PumpStreamHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Exec</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.exec</a> &gt; <span class="el_source">PumpStreamHandler.java</span></div><h1>PumpStreamHandler.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the &quot;License&quot;); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.apache.commons.exec;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PipedOutputStream;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+
+import org.apache.commons.exec.util.DebugUtils;
+
+/**
+ * Copies standard output and error of sub-processes to standard output and error of the parent process. If output or error stream are set to null, any feedback
+ * from that stream will be lost.
+ */
+public class PumpStreamHandler implements ExecuteStreamHandler {
+
+<span class="fc" id="L37">    private static final Duration STOP_TIMEOUT_ADDITION = Duration.ofSeconds(2);</span>
+
+    private Thread outputThread;
+
+    private Thread errorThread;
+
+    private Thread inputThread;
+
+    private final OutputStream outputStream;
+
+    private final OutputStream errorOutputStream;
+
+    private final InputStream inputStream;
+
+    private InputStreamPumper inputStreamPumper;
+
+    /** The timeout Duration the implementation waits when stopping the pumper threads. */
+<span class="fc" id="L54">    private Duration stopTimeout = Duration.ZERO;</span>
+
+    /** The last exception being caught. */
+    private IOException caught;
+
+    /**
+     * The thread factory.
+     */
+    private final ThreadFactory threadFactory;
+
+    /**
+     * Constructs a new {@link PumpStreamHandler}.
+     */
+    public PumpStreamHandler() {
+<span class="fc" id="L68">        this(System.out, System.err);</span>
+<span class="fc" id="L69">    }</span>
+
+    /**
+     * Constructs a new {@link PumpStreamHandler}.
+     *
+     * @param allOutputStream the output/error {@link OutputStream}. The {@code OutputStream}
+     *      implementation must be thread-safe because the output and error reader threads will
+     *      concurrently write to it.
+     */
+    public PumpStreamHandler(final OutputStream allOutputStream) {
+<span class="fc" id="L79">        this(allOutputStream, allOutputStream);</span>
+<span class="fc" id="L80">    }</span>
+
+    /**
+     * Constructs a new {@link PumpStreamHandler}.
+     *
+     * &lt;p&gt;If the same {@link OutputStream} instance is used for output and error, then it must be
+     * thread-safe because the output and error reader threads will concurrently write to it.
+     *
+     * @param outputStream      the output {@link OutputStream}.
+     * @param errorOutputStream the error {@link OutputStream}.
+     */
+    public PumpStreamHandler(final OutputStream outputStream, final OutputStream errorOutputStream) {
+<span class="fc" id="L92">        this(outputStream, errorOutputStream, null);</span>
+<span class="fc" id="L93">    }</span>
+
+    /**
+     * Constructs a new {@link PumpStreamHandler}.
+     *
+     * &lt;p&gt;If the same {@link OutputStream} instance is used for output and error, then it must be
+     * thread-safe because the output and error reader threads will concurrently write to it.
+     *
+     * @param outputStream      the output {@link OutputStream}.
+     * @param errorOutputStream the error {@link OutputStream}.
+     * @param inputStream       the input {@link InputStream}.
+     */
+    public PumpStreamHandler(final OutputStream outputStream, final OutputStream errorOutputStream, final InputStream inputStream) {
+<span class="fc" id="L106">        this(Executors.defaultThreadFactory(), outputStream, errorOutputStream, inputStream);</span>
+<span class="fc" id="L107">    }</span>
+
+    /**
+     * Constructs a new {@link PumpStreamHandler}.
+     *
+     * &lt;p&gt;If the same {@link OutputStream} instance is used for output and error, then it must be
+     * thread-safe because the output and error reader threads will concurrently write to it.
+     *
+     * @param outputStream      the output {@link OutputStream}.
+     * @param errorOutputStream the error {@link OutputStream}.
+     * @param inputStream       the input {@link InputStream}.
+     */
+    private PumpStreamHandler(final ThreadFactory threadFactory, final OutputStream outputStream, final OutputStream errorOutputStream,
+<span class="fc" id="L120">            final InputStream inputStream) {</span>
+<span class="fc" id="L121">        this.threadFactory = threadFactory;</span>
+<span class="fc" id="L122">        this.outputStream = outputStream;</span>
+<span class="fc" id="L123">        this.errorOutputStream = errorOutputStream;</span>
+<span class="fc" id="L124">        this.inputStream = inputStream;</span>
+<span class="fc" id="L125">    }</span>
+
+    /**
+     * Create the pump to handle error output.
+     *
+     * @param is the {@link InputStream}.
+     * @param os the {@link OutputStream}.
+     */
+    protected void createProcessErrorPump(final InputStream is, final OutputStream os) {
+<span class="fc" id="L134">        errorThread = createPump(is, os);</span>
+<span class="fc" id="L135">    }</span>
+
+    /**
+     * Create the pump to handle process output.
+     *
+     * @param is the {@link InputStream}.
+     * @param os the {@link OutputStream}.
+     */
+    protected void createProcessOutputPump(final InputStream is, final OutputStream os) {
+<span class="fc" id="L144">        outputThread = createPump(is, os);</span>
+<span class="fc" id="L145">    }</span>
+
+    /**
+     * Creates a stream pumper to copy the given input stream to the given output stream. When the 'os' is an PipedOutputStream we are closing 'os' afterwards
+     * to avoid an IOException (&quot;Write end dead&quot;).
+     *
+     * @param is the input stream to copy from.
+     * @param os the output stream to copy into.
+     * @return the stream pumper thread.
+     */
+    protected Thread createPump(final InputStream is, final OutputStream os) {
+<span class="fc" id="L156">        return createPump(is, os, os instanceof PipedOutputStream);</span>
+    }
+
+    /**
+     * Creates a stream pumper to copy the given input stream to the given output stream.
+     *
+     * @param is                 the input stream to copy from.
+     * @param os                 the output stream to copy into.
+     * @param closeWhenExhausted close the output stream when the input stream is exhausted.
+     * @return the stream pumper thread.
+     */
+    protected Thread createPump(final InputStream is, final OutputStream os, final boolean closeWhenExhausted) {
+<span class="fc" id="L168">        return ThreadUtil.newThread(threadFactory, new StreamPumper(is, os, closeWhenExhausted), &quot;CommonsExecStreamPumper-&quot;, true);</span>
+    }
+
+    /**
+     * Creates a stream pumper to copy the given input stream to the given output stream.
+     *
+     * @param is the System.in input stream to copy from.
+     * @param os the output stream to copy into.
+     * @return the stream pumper thread.
+     */
+    private Thread createSystemInPump(final InputStream is, final OutputStream os) {
+<span class="fc" id="L179">        inputStreamPumper = new InputStreamPumper(is, os);</span>
+<span class="fc" id="L180">        return ThreadUtil.newThread(threadFactory, inputStreamPumper, &quot;CommonsExecStreamPumper-&quot;, true);</span>
+    }
+
+    /**
+     * Gets the error stream.
+     *
+     * @return {@link OutputStream}.
+     */
+    protected OutputStream getErr() {
+<span class="nc" id="L189">        return errorOutputStream;</span>
+    }
+
+    /**
+     * Gets the output stream.
+     *
+     * @return {@link OutputStream}.
+     */
+    protected OutputStream getOut() {
+<span class="nc" id="L198">        return outputStream;</span>
+    }
+
+    Duration getStopTimeout() {
+<span class="fc" id="L202">        return stopTimeout;</span>
+    }
+
+    /**
+     * Sets the {@link InputStream} from which to read the standard error of the process.
+     *
+     * @param is the {@link InputStream}.
+     */
+    @Override
+    public void setProcessErrorStream(final InputStream is) {
+<span class="fc bfc" id="L212" title="All 2 branches covered.">        if (errorOutputStream != null) {</span>
+<span class="fc" id="L213">            createProcessErrorPump(is, errorOutputStream);</span>
+        }
+<span class="fc" id="L215">    }</span>
+
+    /**
+     * Sets the {@link OutputStream} by means of which input can be sent to the process.
+     *
+     * @param os the {@link OutputStream}.
+     */
+    @Override
+    public void setProcessInputStream(final OutputStream os) {
+<span class="fc bfc" id="L224" title="All 2 branches covered.">        if (inputStream != null) {</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">            if (inputStream == System.in) {</span>
+<span class="fc" id="L226">                inputThread = createSystemInPump(inputStream, os);</span>
+            } else {
+<span class="fc" id="L228">                inputThread = createPump(inputStream, os, true);</span>
+            }
+        } else {
+            try {
+<span class="fc" id="L232">                os.close();</span>
+<span class="nc" id="L233">            } catch (final IOException e) {</span>
+<span class="nc" id="L234">                final String msg = &quot;Got exception while closing output stream&quot;;</span>
+<span class="nc" id="L235">                DebugUtils.handleException(msg, e);</span>
+<span class="fc" id="L236">            }</span>
+        }
+<span class="fc" id="L238">    }</span>
+
+    /**
+     * Sets the {@link InputStream} from which to read the standard output of the process.
+     *
+     * @param is the {@link InputStream}.
+     */
+    @Override
+    public void setProcessOutputStream(final InputStream is) {
+<span class="fc bfc" id="L247" title="All 2 branches covered.">        if (outputStream != null) {</span>
+<span class="fc" id="L248">            createProcessOutputPump(is, outputStream);</span>
+        }
+<span class="fc" id="L250">    }</span>
+
+    /**
+     * Sets maximum time to wait until output streams are exhausted when {@link #stop()} was called.
+     *
+     * @param timeout timeout or zero to wait forever (default).
+     * @since 1.4.0
+     */
+    public void setStopTimeout(final Duration timeout) {
+<span class="fc bfc" id="L259" title="All 2 branches covered.">        this.stopTimeout = timeout != null ? timeout : Duration.ZERO;</span>
+<span class="fc" id="L260">    }</span>
+
+    /**
+     * Sets maximum time to wait until output streams are exhausted when {@link #stop()} was called.
+     *
+     * @param timeout timeout in milliseconds or zero to wait forever (default).
+     * @deprecated Use {@link #setStopTimeout(Duration)}.
+     */
+    @Deprecated
+    public void setStopTimeout(final long timeout) {
+<span class="fc" id="L270">        this.stopTimeout = Duration.ofMillis(timeout);</span>
+<span class="fc" id="L271">    }</span>
+
+    /**
+     * Starts the {@link Thread}s.
+     */
+    @Override
+    public void start() {
+<span class="fc" id="L278">        start(outputThread);</span>
+<span class="fc" id="L279">        start(errorThread);</span>
+<span class="fc" id="L280">        start(inputThread);</span>
+<span class="fc" id="L281">    }</span>
+
+    /**
+     * Starts the given {@link Thread}.
+     */
+    private void start(final Thread thread) {
+<span class="fc bfc" id="L287" title="All 2 branches covered.">        if (thread != null) {</span>
+<span class="fc" id="L288">            thread.start();</span>
+        }
+<span class="fc" id="L290">    }</span>
+
+    /**
+     * Stops pumping the streams. When a timeout is specified it is not guaranteed that the pumper threads are cleanly terminated.
+     */
+    @Override
+    public void stop() throws IOException {
+<span class="fc bfc" id="L297" title="All 2 branches covered.">        if (inputStreamPumper != null) {</span>
+<span class="fc" id="L298">            inputStreamPumper.stopProcessing();</span>
+        }
+<span class="fc" id="L300">        stop(outputThread, stopTimeout);</span>
+<span class="fc" id="L301">        stop(errorThread, stopTimeout);</span>
+<span class="fc" id="L302">        stop(inputThread, stopTimeout);</span>
+
+<span class="fc bfc" id="L304" title="All 4 branches covered.">        if (errorOutputStream != null &amp;&amp; errorOutputStream != outputStream) {</span>
+            try {
+<span class="fc" id="L306">                errorOutputStream.flush();</span>
+<span class="nc" id="L307">            } catch (final IOException e) {</span>
+<span class="nc" id="L308">                final String msg = &quot;Got exception while flushing the error stream : &quot; + e.getMessage();</span>
+<span class="nc" id="L309">                DebugUtils.handleException(msg, e);</span>
+<span class="fc" id="L310">            }</span>
+        }
+
+<span class="fc bfc" id="L313" title="All 2 branches covered.">        if (outputStream != null) {</span>
+            try {
+<span class="fc" id="L315">                outputStream.flush();</span>
+<span class="nc" id="L316">            } catch (final IOException e) {</span>
+<span class="nc" id="L317">                final String msg = &quot;Got exception while flushing the output stream&quot;;</span>
+<span class="nc" id="L318">                DebugUtils.handleException(msg, e);</span>
+<span class="fc" id="L319">            }</span>
+        }
+
+<span class="pc bpc" id="L322" title="1 of 2 branches missed.">        if (caught != null) {</span>
+<span class="nc" id="L323">            throw caught;</span>
+        }
+<span class="fc" id="L325">    }</span>
+
+    /**
+     * Stops a pumper thread. The implementation actually waits longer than specified in 'timeout' to detect if the timeout was indeed exceeded. If the timeout
+     * was exceeded an IOException is created to be thrown to the caller.
+     *
+     * @param thread  the thread to be stopped.
+     * @param timeout the time in ms to wait to join.
+     */
+    private void stop(final Thread thread, final Duration timeout) {
+<span class="fc bfc" id="L335" title="All 2 branches covered.">        if (thread != null) {</span>
+            try {
+<span class="pc bpc" id="L337" title="1 of 2 branches missed.">                if (timeout.equals(Duration.ZERO)) {</span>
+<span class="fc" id="L338">                    thread.join();</span>
+                } else {
+<span class="nc" id="L340">                    final Duration timeToWait = timeout.plus(STOP_TIMEOUT_ADDITION);</span>
+<span class="nc" id="L341">                    final Instant startTime = Instant.now();</span>
+<span class="nc" id="L342">                    thread.join(timeToWait.toMillis());</span>
+<span class="nc bnc" id="L343" title="All 2 branches missed.">                    if (Instant.now().isAfter(startTime.plus(timeToWait))) {</span>
+<span class="nc" id="L344">                        caught = new ExecuteException(&quot;The stop timeout of &quot; + timeout + &quot; ms was exceeded&quot;, Executor.INVALID_EXITVALUE);</span>
+                    }
+                }
+<span class="nc" id="L347">            } catch (final InterruptedException e) {</span>
+<span class="nc" id="L348">                thread.interrupt();</span>
+<span class="fc" id="L349">            }</span>
+        }
+<span class="fc" id="L351">    }</span>
+
+    /**
+     * Stops a pumper thread. The implementation actually waits longer than specified in 'timeout' to detect if the timeout was indeed exceeded. If the timeout
+     * was exceeded an IOException is created to be thrown to the caller.
+     *
+     * @param thread        the thread to be stopped.
+     * @param timeoutMillis the time in ms to wait to join.
+     */
+    protected void stopThread(final Thread thread, final long timeoutMillis) {
+<span class="nc" id="L361">        stop(thread, Duration.ofMillis(timeoutMillis));</span>
+<span class="nc" id="L362">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

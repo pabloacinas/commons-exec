@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CommandLine.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Exec</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.exec</a> &gt; <span class="el_source">CommandLine.java</span></div><h1>CommandLine.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the &quot;License&quot;); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.apache.commons.exec;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.StringTokenizer;
+import java.util.Vector;
+
+import org.apache.commons.exec.util.StringUtils;
+
+/**
+ * CommandLine objects help handling command lines specifying processes to execute. The class can be used to a command line by an application.
+ */
+public class CommandLine {
+
+    /**
+     * Encapsulates a command line argument.
+     */
+    static final class Argument {
+
+        private final String value;
+        private final boolean handleQuoting;
+
+<span class="fc" id="L43">        private Argument(final String value, final boolean handleQuoting) {</span>
+<span class="fc" id="L44">            this.value = value.trim();</span>
+<span class="fc" id="L45">            this.handleQuoting = handleQuoting;</span>
+<span class="fc" id="L46">        }</span>
+
+        private String getValue() {
+<span class="fc" id="L49">            return value;</span>
+        }
+
+        private boolean isHandleQuoting() {
+<span class="fc" id="L53">            return handleQuoting;</span>
+        }
+    }
+
+    /**
+     * Create a command line from a string.
+     *
+     * @param line the first element becomes the executable, the rest the arguments.
+     * @return the parsed command line.
+     * @throws IllegalArgumentException If line is null or all whitespace.
+     */
+    public static CommandLine parse(final String line) {
+<span class="fc" id="L65">        return parse(line, null);</span>
+    }
+
+    /**
+     * Create a command line from a string.
+     *
+     * @param line            the first element becomes the executable, the rest the arguments.
+     * @param substitutionMap the name/value pairs used for substitution.
+     * @return the parsed command line.
+     * @throws IllegalArgumentException If line is null or all whitespace.
+     */
+    public static CommandLine parse(final String line, final Map&lt;String, ?&gt; substitutionMap) {
+
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        if (line == null) {</span>
+<span class="fc" id="L79">            throw new IllegalArgumentException(&quot;Command line cannot be null&quot;);</span>
+        }
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (line.trim().isEmpty()) {</span>
+<span class="fc" id="L82">            throw new IllegalArgumentException(&quot;Command line cannot be empty&quot;);</span>
+        }
+<span class="fc" id="L84">        final String[] tmp = translateCommandline(line);</span>
+
+<span class="fc" id="L86">        final CommandLine cl = new CommandLine(tmp[0]);</span>
+<span class="fc" id="L87">        cl.setSubstitutionMap(substitutionMap);</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">        for (int i = 1; i &lt; tmp.length; i++) {</span>
+<span class="fc" id="L89">            cl.addArgument(tmp[i]);</span>
+        }
+
+<span class="fc" id="L92">        return cl;</span>
+    }
+
+    /**
+     * Crack a command line.
+     *
+     * @param toProcess the command line to process.
+     * @return the command line broken into strings. An empty or null toProcess parameter results in a zero sized array.
+     */
+    private static String[] translateCommandline(final String toProcess) {
+<span class="pc bpc" id="L102" title="2 of 4 branches missed.">        if (toProcess == null || toProcess.trim().isEmpty()) {</span>
+            // no command? no string
+<span class="nc" id="L104">            return new String[0];</span>
+        }
+
+        // parse with a simple finite state machine.
+
+<span class="fc" id="L109">        final int normal = 0;</span>
+<span class="fc" id="L110">        final int inQuote = 1;</span>
+<span class="fc" id="L111">        final int inDoubleQuote = 2;</span>
+<span class="fc" id="L112">        int state = normal;</span>
+<span class="fc" id="L113">        final StringTokenizer tok = new StringTokenizer(toProcess, &quot;\&quot;\' &quot;, true);</span>
+<span class="fc" id="L114">        final ArrayList&lt;String&gt; list = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L115">        StringBuilder current = new StringBuilder();</span>
+<span class="fc" id="L116">        boolean lastTokenHasBeenQuoted = false;</span>
+
+<span class="fc bfc" id="L118" title="All 2 branches covered.">        while (tok.hasMoreTokens()) {</span>
+<span class="fc" id="L119">            final String nextTok = tok.nextToken();</span>
+<span class="fc bfc" id="L120" title="All 3 branches covered.">            switch (state) {</span>
+            case inQuote:
+<span class="fc bfc" id="L122" title="All 2 branches covered.">                if (&quot;\'&quot;.equals(nextTok)) {</span>
+<span class="fc" id="L123">                    lastTokenHasBeenQuoted = true;</span>
+<span class="fc" id="L124">                    state = normal;</span>
+                } else {
+<span class="fc" id="L126">                    current.append(nextTok);</span>
+                }
+<span class="fc" id="L128">                break;</span>
+            case inDoubleQuote:
+<span class="fc bfc" id="L130" title="All 2 branches covered.">                if (&quot;\&quot;&quot;.equals(nextTok)) {</span>
+<span class="fc" id="L131">                    lastTokenHasBeenQuoted = true;</span>
+<span class="fc" id="L132">                    state = normal;</span>
+                } else {
+<span class="fc" id="L134">                    current.append(nextTok);</span>
+                }
+<span class="fc" id="L136">                break;</span>
+            default:
+<span class="fc bfc" id="L138" title="All 4 branches covered.">                switch (nextTok) {</span>
+                case &quot;\'&quot;:
+<span class="fc" id="L140">                    state = inQuote;</span>
+<span class="fc" id="L141">                    break;</span>
+                case &quot;\&quot;&quot;:
+<span class="fc" id="L143">                    state = inDoubleQuote;</span>
+<span class="fc" id="L144">                    break;</span>
+                case &quot; &quot;:
+<span class="pc bpc" id="L146" title="1 of 4 branches missed.">                    if (lastTokenHasBeenQuoted || current.length() != 0) {</span>
+<span class="fc" id="L147">                        list.add(current.toString());</span>
+<span class="fc" id="L148">                        current = new StringBuilder();</span>
+                    }
+                    break;
+                default:
+<span class="fc" id="L152">                    current.append(nextTok);</span>
+                    break;
+                }
+<span class="fc" id="L155">                lastTokenHasBeenQuoted = false;</span>
+                break;
+            }
+<span class="fc" id="L158">        }</span>
+
+<span class="pc bpc" id="L160" title="1 of 4 branches missed.">        if (lastTokenHasBeenQuoted || current.length() != 0) {</span>
+<span class="fc" id="L161">            list.add(current.toString());</span>
+        }
+
+<span class="pc bpc" id="L164" title="1 of 4 branches missed.">        if (state == inQuote || state == inDoubleQuote) {</span>
+<span class="fc" id="L165">            throw new IllegalArgumentException(&quot;Unbalanced quotes in &quot; + toProcess);</span>
+        }
+
+<span class="fc" id="L168">        final String[] args = new String[list.size()];</span>
+<span class="fc" id="L169">        return list.toArray(args);</span>
+    }
+
+    /**
+     * The arguments of the command.
+     */
+<span class="fc" id="L175">    private final Vector&lt;Argument&gt; arguments = new Vector&lt;&gt;();</span>
+
+    /**
+     * The program to execute.
+     */
+    private final String executable;
+
+    /**
+     * A map of name value pairs used to expand command line arguments.
+     */
+    private Map&lt;String, ?&gt; substitutionMap; // N.B. This can contain values other than Strings.
+
+    /**
+     * Tests whether a file was used to set the executable.
+     */
+    private final boolean isFile;
+
+    /**
+     * Copy constructor.
+     *
+     * @param other the instance to copy.
+     */
+<span class="fc" id="L197">    public CommandLine(final CommandLine other) {</span>
+<span class="fc" id="L198">        this.executable = other.getExecutable();</span>
+<span class="fc" id="L199">        this.isFile = other.isFile();</span>
+<span class="fc" id="L200">        this.arguments.addAll(other.arguments);</span>
+
+<span class="pc bpc" id="L202" title="1 of 2 branches missed.">        if (other.getSubstitutionMap() != null) {</span>
+<span class="fc" id="L203">            this.substitutionMap = new HashMap&lt;&gt;(other.getSubstitutionMap());</span>
+        }
+<span class="fc" id="L205">    }</span>
+
+    /**
+     * Create a command line without any arguments.
+     *
+     * @param executable the executable file.
+     */
+<span class="fc" id="L212">    public CommandLine(final File executable) {</span>
+<span class="fc" id="L213">        this.isFile = true;</span>
+<span class="fc" id="L214">        this.executable = toCleanExecutable(executable.getAbsolutePath());</span>
+<span class="fc" id="L215">    }</span>
+
+    /**
+     * Create a command line without any arguments.
+     *
+     * @param executable the executable.
+     * @throws NullPointerException     on null input.
+     * @throws IllegalArgumentException on empty input.
+     */
+<span class="fc" id="L224">    public CommandLine(final String executable) {</span>
+<span class="fc" id="L225">        this.isFile = false;</span>
+<span class="fc" id="L226">        this.executable = toCleanExecutable(executable);</span>
+<span class="fc" id="L227">    }</span>
+
+    /**
+     * Add a single argument. Handles quoting.
+     *
+     * @param argument The argument to add.
+     * @return The command line itself.
+     * @throws IllegalArgumentException If argument contains both single and double quotes.
+     */
+    public CommandLine addArgument(final String argument) {
+<span class="fc" id="L237">        return addArgument(argument, true);</span>
+    }
+
+    /**
+     * Add a single argument.
+     *
+     * @param argument      The argument to add.
+     * @param handleQuoting Add the argument with/without handling quoting.
+     * @return The command line itself.
+     */
+    public CommandLine addArgument(final String argument, final boolean handleQuoting) {
+
+<span class="fc bfc" id="L249" title="All 2 branches covered.">        if (argument == null) {</span>
+<span class="fc" id="L250">            return this;</span>
+        }
+
+        // check if we can really quote the argument - if not throw an
+        // IllegalArgumentException
+<span class="fc bfc" id="L255" title="All 2 branches covered.">        if (handleQuoting) {</span>
+<span class="fc" id="L256">            StringUtils.quoteArgument(argument);</span>
+        }
+
+<span class="fc" id="L259">        arguments.add(new Argument(argument, handleQuoting));</span>
+<span class="fc" id="L260">        return this;</span>
+    }
+
+    /**
+     * Add multiple arguments. Handles parsing of quotes and whitespace. Please note that the parsing can have undesired side-effects therefore it is
+     * recommended to build the command line incrementally.
+     *
+     * @param addArguments An string containing multiple arguments.
+     * @return The command line itself.
+     */
+    public CommandLine addArguments(final String addArguments) {
+<span class="fc" id="L271">        return addArguments(addArguments, true);</span>
+    }
+
+    /**
+     * Add multiple arguments. Handles parsing of quotes and whitespace. Please note that the parsing can have undesired side-effects therefore it is
+     * recommended to build the command line incrementally.
+     *
+     * @param addArguments  An string containing multiple arguments.
+     * @param handleQuoting Add the argument with/without handling quoting.
+     * @return The command line itself.
+     */
+    public CommandLine addArguments(final String addArguments, final boolean handleQuoting) {
+<span class="pc bpc" id="L283" title="1 of 2 branches missed.">        if (addArguments != null) {</span>
+<span class="fc" id="L284">            final String[] argumentsArray = translateCommandline(addArguments);</span>
+<span class="fc" id="L285">            addArguments(argumentsArray, handleQuoting);</span>
+        }
+
+<span class="fc" id="L288">        return this;</span>
+    }
+
+    /**
+     * Add multiple arguments. Handles parsing of quotes and whitespace.
+     *
+     * @param addArguments An array of arguments.
+     * @return The command line itself.
+     */
+    public CommandLine addArguments(final String[] addArguments) {
+<span class="fc" id="L298">        return addArguments(addArguments, true);</span>
+    }
+
+    /**
+     * Add multiple arguments.
+     *
+     * @param addArguments  An array of arguments.
+     * @param handleQuoting Add the argument with/without handling quoting.
+     * @return The command line itself.
+     */
+    public CommandLine addArguments(final String[] addArguments, final boolean handleQuoting) {
+<span class="fc bfc" id="L309" title="All 2 branches covered.">        if (addArguments != null) {</span>
+<span class="fc bfc" id="L310" title="All 2 branches covered.">            for (final String addArgument : addArguments) {</span>
+<span class="fc" id="L311">                addArgument(addArgument, handleQuoting);</span>
+            }
+        }
+<span class="fc" id="L314">        return this;</span>
+    }
+
+    /**
+     * Expand variables in a command line argument.
+     *
+     * @param argument the argument.
+     * @return the expanded string.
+     */
+    private String expandArgument(final String argument) {
+<span class="fc" id="L324">        final StringBuffer stringBuffer = StringUtils.stringSubstitution(argument, getSubstitutionMap(), true);</span>
+<span class="fc" id="L325">        return stringBuffer.toString();</span>
+    }
+
+    /**
+     * Gets the expanded and quoted command line arguments.
+     *
+     * @return The quoted arguments.
+     */
+    public String[] getArguments() {
+
+        Argument currArgument;
+        String expandedArgument;
+<span class="fc" id="L337">        final String[] result = new String[arguments.size()];</span>
+
+<span class="fc bfc" id="L339" title="All 2 branches covered.">        for (int i = 0; i &lt; result.length; i++) {</span>
+<span class="fc" id="L340">            currArgument = arguments.get(i);</span>
+<span class="fc" id="L341">            expandedArgument = expandArgument(currArgument.getValue());</span>
+<span class="fc bfc" id="L342" title="All 2 branches covered.">            result[i] = currArgument.isHandleQuoting() ? StringUtils.quoteArgument(expandedArgument) : expandedArgument;</span>
+        }
+
+<span class="fc" id="L345">        return result;</span>
+    }
+
+    /**
+     * Gets the executable.
+     *
+     * @return The executable.
+     */
+    public String getExecutable() {
+        // Expand the executable and replace '/' and '\\' with the platform
+        // specific file separator char. This is safe here since we know
+        // that this is a platform specific command.
+<span class="fc" id="L357">        return StringUtils.fixFileSeparatorChar(expandArgument(executable));</span>
+    }
+
+    /**
+     * Gets the substitution map.
+     *
+     * @return the substitution map.
+     */
+    public Map&lt;String, ?&gt; getSubstitutionMap() {
+<span class="fc" id="L366">        return substitutionMap;</span>
+    }
+
+    /**
+     * Tests whether a file was used to set the executable.
+     *
+     * @return true whether a file was used for setting the executable.
+     */
+    public boolean isFile() {
+<span class="fc" id="L375">        return isFile;</span>
+    }
+
+    /**
+     * Sets the substitutionMap to expand variables in the command line.
+     *
+     * @param substitutionMap the map
+     */
+    public void setSubstitutionMap(final Map&lt;String, ?&gt; substitutionMap) {
+<span class="fc" id="L384">        this.substitutionMap = substitutionMap;</span>
+<span class="fc" id="L385">    }</span>
+
+    /**
+     * Cleans the executable string. The argument is trimmed and '/' and '\\' are replaced with the platform specific file separator char
+     *
+     * @param dirtyExecutable the executable.
+     * @return the platform-specific executable string.
+     * @throws NullPointerException     on null input.
+     * @throws IllegalArgumentException on empty input.
+     */
+    private String toCleanExecutable(final String dirtyExecutable) {
+<span class="fc" id="L396">        Objects.requireNonNull(dirtyExecutable, &quot;dirtyExecutable&quot;);</span>
+<span class="fc bfc" id="L397" title="All 2 branches covered.">        if (dirtyExecutable.trim().isEmpty()) {</span>
+<span class="fc" id="L398">            throw new IllegalArgumentException(&quot;Executable cannot be empty&quot;);</span>
+        }
+<span class="fc" id="L400">        return StringUtils.fixFileSeparatorChar(dirtyExecutable);</span>
+    }
+
+    /**
+     * Stringify operator returns the command line as a string. Parameters are correctly quoted when containing a space or left untouched if the are already
+     * quoted.
+     *
+     * @return the command line as single string.
+     */
+    @Override
+    public String toString() {
+<span class="fc" id="L411">        return &quot;[&quot; + String.join(&quot;, &quot;, toStrings()) + &quot;]&quot;;</span>
+    }
+
+    /**
+     * Converts the command line as an array of strings.
+     *
+     * @return The command line as an string array.
+     */
+    public String[] toStrings() {
+<span class="fc" id="L420">        final String[] result = new String[arguments.size() + 1];</span>
+<span class="fc" id="L421">        result[0] = getExecutable();</span>
+<span class="fc" id="L422">        System.arraycopy(getArguments(), 0, result, 1, result.length - 1);</span>
+<span class="fc" id="L423">        return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

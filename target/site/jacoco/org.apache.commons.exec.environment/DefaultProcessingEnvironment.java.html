@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultProcessingEnvironment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Exec</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.exec.environment</a> &gt; <span class="el_source">DefaultProcessingEnvironment.java</span></div><h1>DefaultProcessingEnvironment.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.exec.environment;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.OS;
+
+/**
+ * Helper class to determine the environment variable for the OS. Depending on the JDK the environment variables can be either retrieved directly from the JVM
+ * or requires starting a process to get them running an OS command line.
+ */
+<span class="fc" id="L33">public class DefaultProcessingEnvironment {</span>
+
+    /** The environment variables of the process */
+    protected Map&lt;String, String&gt; procEnvironment;
+
+    /**
+     * Creates a map that obeys the casing rules of the current platform for key lookup. E.g. on a Windows platform, the map keys will be case-insensitive.
+     *
+     * @return The map for storage of environment variables, never {@code null}.
+     */
+    private Map&lt;String, String&gt; createEnvironmentMap() {
+<span class="pc bpc" id="L44" title="1 of 2 branches missed.">        if (OS.isFamilyWindows()) {</span>
+<span class="fc" id="L45">            return new TreeMap&lt;&gt;(String::compareToIgnoreCase);</span>
+        }
+<span class="nc" id="L47">        return new HashMap&lt;&gt;();</span>
+    }
+
+    /**
+     * Creates the list of environment variables for this process.
+     *
+     * @return a amp containing the environment variables.
+     * @throws IOException the operation failed.
+     */
+    protected Map&lt;String, String&gt; createProcEnvironment() throws IOException {
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">        if (procEnvironment == null) {</span>
+<span class="fc" id="L58">            procEnvironment = createEnvironmentMap();</span>
+<span class="fc" id="L59">            procEnvironment.putAll(System.getenv());</span>
+        }
+<span class="fc" id="L61">        return procEnvironment;</span>
+    }
+
+    /**
+     * Determine the OS specific command line to get a list of environment variables.
+     *
+     * @return the command line.
+     * @deprecated No longer needed.
+     */
+    @Deprecated
+    protected CommandLine getProcEnvCommand() {
+//        String executable;
+//        String[] arguments = null;
+//        if (OS.isFamilyOS2()) {
+//            // OS/2 - use same mechanism as Windows 2000
+//            executable = &quot;cmd&quot;;
+//
+//            arguments = new String[] {&quot;/c&quot;, &quot;set&quot;};
+//        } else if (OS.isFamilyWindows()) {
+//            // Determine if we're running under XP/2000/NT or 98/95
+//            if (OS.isFamilyWin9x()) {
+//                executable = &quot;command.com&quot;;
+//                // Windows 98/95
+//            } else {
+//                executable = &quot;cmd&quot;;
+//                // Windows XP/2000/NT/2003
+//            }
+//            arguments = new String[] {&quot;/c&quot;, &quot;set&quot;};
+//        } else if (OS.isFamilyZOS() || OS.isFamilyUnix()) {
+//            // On most systems one could use: /bin/sh -c env
+//
+//            // Some systems have /bin/env, others /usr/bin/env, just try
+//            if (new File(&quot;/bin/env&quot;).canRead()) {
+//                executable = &quot;/bin/env&quot;;
+//            } else if (new File(&quot;/usr/bin/env&quot;).canRead()) {
+//                executable = &quot;/usr/bin/env&quot;;
+//            } else {
+//                // rely on PATH
+//                executable = &quot;env&quot;;
+//            }
+//        } else if (OS.isFamilyNetware() || OS.isFamilyOS400()) {
+//            // rely on PATH
+//            executable = &quot;env&quot;;
+//        } else {
+//            // macOS 9 and previous
+//            // TODO: I have no idea how to get it, someone must fix it
+//            executable = null;
+//        }
+<span class="nc" id="L109">        final CommandLine commandLine = null;</span>
+//        if (executable != null) {
+//            commandLine = new CommandLine(executable);
+//            commandLine.addArguments(arguments);
+//        }
+<span class="nc" id="L114">        return commandLine;</span>
+    }
+
+    /**
+     * Gets the list of environment variables for this process.
+     *
+     * @return a map containing the environment variables.
+     * @throws IOException obtaining the environment variables failed.
+     */
+    public synchronized Map&lt;String, String&gt; getProcEnvironment() throws IOException {
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (procEnvironment == null) {</span>
+<span class="fc" id="L125">            procEnvironment = createProcEnvironment();</span>
+        }
+        // create a copy of the map just in case that
+        // anyone is going to modifiy it, e.g. removing
+        // or setting an evironment variable
+<span class="fc" id="L130">        final Map&lt;String, String&gt; copy = createEnvironmentMap();</span>
+<span class="fc" id="L131">        copy.putAll(procEnvironment);</span>
+<span class="fc" id="L132">        return copy;</span>
+    }
+
+    /**
+     * Runs a process to list the environment variables.
+     *
+     * @return a reader containing the output of the process.
+     * @throws IOException starting the process failed.
+     * @deprecated No longer needed.
+     */
+    @Deprecated
+    protected BufferedReader runProcEnvCommand() throws IOException {
+//        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+//        final Executor exe = DefaultExecutor.builder().get();
+//        exe.setStreamHandler(new PumpStreamHandler(out));
+//        // ignore the exit value - Just try to use what we got
+//        exe.execute(getProcEnvCommand());
+//        return new BufferedReader(new StringReader(toString(out)));
+<span class="nc" id="L150">        return null;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

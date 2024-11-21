@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShutdownHookProcessDestroyer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Exec</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.exec</a> &gt; <span class="el_source">ShutdownHookProcessDestroyer.java</span></div><h1>ShutdownHookProcessDestroyer.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the &quot;License&quot;); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.apache.commons.exec;
+
+import java.util.Vector;
+
+/**
+ * Destroys all registered {@code Process}es when the VM exits.
+ */
+public class ShutdownHookProcessDestroyer implements ProcessDestroyer, Runnable {
+
+    private final class ProcessDestroyerThread extends Thread {
+
+<span class="fc" id="L29">        private boolean shouldDestroy = true;</span>
+
+<span class="fc" id="L31">        public ProcessDestroyerThread() {</span>
+<span class="fc" id="L32">            super(&quot;ProcessDestroyer Shutdown Hook&quot;);</span>
+<span class="fc" id="L33">        }</span>
+
+        @Override
+        public void run() {
+<span class="pc bpc" id="L37" title="1 of 2 branches missed.">            if (shouldDestroy) {</span>
+<span class="nc" id="L38">                ShutdownHookProcessDestroyer.this.run();</span>
+            }
+<span class="fc" id="L40">        }</span>
+
+        public void setShouldDestroy(final boolean shouldDestroy) {
+<span class="fc" id="L43">            this.shouldDestroy = shouldDestroy;</span>
+<span class="fc" id="L44">        }</span>
+    }
+
+    /** The list of currently running processes. */
+<span class="fc" id="L48">    private final Vector&lt;Process&gt; processes = new Vector&lt;&gt;();</span>
+
+    /** The thread registered at the JVM to execute the shutdown handler. */
+    private ProcessDestroyerThread destroyProcessThread;
+
+    /** Whether or not this ProcessDestroyer has been registered as a shutdown hook. */
+    private boolean added;
+
+    /**
+     * Whether or not this ProcessDestroyer is currently running as shutdown hook.
+     */
+    private volatile boolean running;
+
+    /**
+     * Constructs a {@code ProcessDestroyer} and obtains {@code Runtime.addShutdownHook()} and {@code Runtime.removeShutdownHook()} through reflection. The
+     * ProcessDestroyer manages a list of processes to be destroyed when the VM exits. If a process is added when the list is empty, this
+     * {@code ProcessDestroyer} is registered as a shutdown hook. If removing a process results in an empty list, the {@code ProcessDestroyer} is removed as a
+     * shutdown hook.
+     */
+<span class="fc" id="L67">    public ShutdownHookProcessDestroyer() {</span>
+<span class="fc" id="L68">    }</span>
+
+    /**
+     * Returns {@code true} if the specified {@code Process} was successfully added to the list of processes to destroy upon VM exit.
+     *
+     * @param process the process to add.
+     * @return {@code true} if the specified {@code Process} was successfully added.
+     */
+    @Override
+    public boolean add(final Process process) {
+<span class="fc" id="L78">        synchronized (processes) {</span>
+            // if this list is empty, register the shutdown hook
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">            if (processes.isEmpty()) {</span>
+<span class="fc" id="L81">                addShutdownHook();</span>
+            }
+<span class="fc" id="L83">            processes.addElement(process);</span>
+<span class="fc" id="L84">            return processes.contains(process);</span>
+        }
+    }
+
+    /**
+     * Registers this {@code ProcessDestroyer} as a shutdown hook.
+     */
+    private void addShutdownHook() {
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">        if (!running) {</span>
+<span class="fc" id="L93">            destroyProcessThread = new ProcessDestroyerThread();</span>
+<span class="fc" id="L94">            Runtime.getRuntime().addShutdownHook(destroyProcessThread);</span>
+<span class="fc" id="L95">            added = true;</span>
+        }
+<span class="fc" id="L97">    }</span>
+
+    /**
+     * Tests whether or not the ProcessDestroyer is registered as shutdown hook.
+     *
+     * @return true if this is currently added as shutdown hook.
+     */
+    public boolean isAddedAsShutdownHook() {
+<span class="fc" id="L105">        return added;</span>
+    }
+
+    /**
+     * Tests emptiness (size == 0).
+     *
+     * @return Whether or not this is empty.
+     * @since 1.4.0
+     */
+    public boolean isEmpty() {
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        return size() == 0;</span>
+    }
+
+    /**
+     * Returns {@code true} if the specified {@code Process} was successfully removed from the list of processes to destroy upon VM exit.
+     *
+     * @param process the process to remove.
+     * @return {@code true} if the specified {@code Process} was successfully removed.
+     */
+    @Override
+    public boolean remove(final Process process) {
+<span class="fc" id="L126">        synchronized (processes) {</span>
+<span class="fc" id="L127">            final boolean processRemoved = processes.removeElement(process);</span>
+<span class="pc bpc" id="L128" title="2 of 4 branches missed.">            if (processRemoved &amp;&amp; processes.isEmpty()) {</span>
+<span class="fc" id="L129">                removeShutdownHook();</span>
+            }
+<span class="fc" id="L131">            return processRemoved;</span>
+        }
+    }
+
+    /**
+     * Removes this {@code ProcessDestroyer} as a shutdown hook, uses reflection to ensure pre-JDK 1.3 compatibility
+     */
+    private void removeShutdownHook() {
+<span class="pc bpc" id="L139" title="2 of 4 branches missed.">        if (added &amp;&amp; !running) {</span>
+<span class="fc" id="L140">            final boolean removed = Runtime.getRuntime().removeShutdownHook(destroyProcessThread);</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">            if (!removed) {</span>
+<span class="nc" id="L142">                System.err.println(&quot;Could not remove shutdown hook&quot;);</span>
+            }
+            // start the hook thread, a unstarted thread may not be eligible for garbage collection Cf.: https://developer.java.sun.com/developer/
+            // bugParade/bugs/4533087.html
+
+<span class="fc" id="L147">            destroyProcessThread.setShouldDestroy(false);</span>
+<span class="fc" id="L148">            destroyProcessThread.start();</span>
+            // this should return quickly, since it basically is a NO-OP.
+            try {
+<span class="fc" id="L151">                destroyProcessThread.join(20000);</span>
+<span class="nc" id="L152">            } catch (final InterruptedException ignore) {</span>
+                // the thread didn't die in time
+                // it should not kill any processes unexpectedly
+<span class="fc" id="L155">            }</span>
+<span class="fc" id="L156">            destroyProcessThread = null;</span>
+<span class="fc" id="L157">            added = false;</span>
+        }
+<span class="fc" id="L159">    }</span>
+
+    /**
+     * Invoked by the VM when it is exiting.
+     */
+    @Override
+    public void run() {
+<span class="nc" id="L166">        synchronized (processes) {</span>
+<span class="nc" id="L167">            running = true;</span>
+<span class="nc" id="L168">            processes.forEach(process -&gt; {</span>
+                try {
+<span class="nc" id="L170">                    process.destroy();</span>
+<span class="nc" id="L171">                } catch (final Throwable t) {</span>
+<span class="nc" id="L172">                    System.err.println(&quot;Unable to terminate process during process shutdown&quot;);</span>
+<span class="nc" id="L173">                }</span>
+<span class="nc" id="L174">            });</span>
+<span class="nc" id="L175">        }</span>
+<span class="nc" id="L176">    }</span>
+
+    /**
+     * Returns the number of registered processes.
+     *
+     * @return the number of register process.
+     */
+    @Override
+    public int size() {
+<span class="fc" id="L185">        return processes.size();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

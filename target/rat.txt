@@ -1,0 +1,164 @@
+
+*****************************************************
+Summary
+-------
+Generated at: 2024-11-21T16:26:25+01:00
+
+Notes: 4
+Binaries: 1
+Archives: 0
+Standards: 133
+
+Apache Licensed: 133
+Generated Documents: 0
+
+JavaDocs are generated, thus a license header is optional.
+Generated files do not require license headers.
+
+0 Unknown Licenses
+
+*****************************************************
+  Files with Apache License headers will be marked AL
+  Binary files (which do not require any license headers) will be marked B
+  Compressed archives will be marked A
+  Notices, licenses etc. will be marked N
+  AL    .github/dependabot.yml
+  AL    .github/GH-ROBOTS.txt
+  AL    .github/workflows/codeql-analysis.yml
+  AL    .github/workflows/dependency-review.yml
+  AL    .github/workflows/maven.yml
+  AL    .github/workflows/scorecards-analysis.yml
+  AL    build.xml
+  AL    CODE_OF_CONDUCT.md
+  AL    CONTRIBUTING.md
+  N     LICENSE.txt
+  N     NOTICE.txt
+  AL    pmd.xml
+  AL    pom.xml
+  AL    README.md
+  N     RELEASE-NOTES.txt
+  AL    SECURITY.md
+  AL    src/assembly/bin.xml
+  AL    src/assembly/src.xml
+  AL    src/changes/changes.xml
+  AL    src/changes/release-notes.vm
+  AL    src/conf/checkstyle.xml
+  AL    src/conf/findbugs-exclude-filter.xml
+  AL    src/conf/HEADER.txt
+  AL    src/conf/pmd-ruleset.xml
+  AL    src/main/java/org/apache/commons/exec/CommandLine.java
+  AL    src/main/java/org/apache/commons/exec/DaemonExecutor.java
+  AL    src/main/java/org/apache/commons/exec/DefaultExecuteResultHandler.java
+  AL    src/main/java/org/apache/commons/exec/DefaultExecutor.java
+  AL    src/main/java/org/apache/commons/exec/environment/DefaultProcessingEnvironment.java
+  AL    src/main/java/org/apache/commons/exec/environment/EnvironmentUtils.java
+  AL    src/main/java/org/apache/commons/exec/environment/OpenVmsProcessingEnvironment.java
+  AL    src/main/java/org/apache/commons/exec/environment/package-info.java
+  AL    src/main/java/org/apache/commons/exec/ExecuteException.java
+  AL    src/main/java/org/apache/commons/exec/ExecuteResultHandler.java
+  AL    src/main/java/org/apache/commons/exec/ExecuteStreamHandler.java
+  AL    src/main/java/org/apache/commons/exec/ExecuteWatchdog.java
+  AL    src/main/java/org/apache/commons/exec/Executor.java
+  AL    src/main/java/org/apache/commons/exec/InputStreamPumper.java
+  AL    src/main/java/org/apache/commons/exec/launcher/CommandLauncher.java
+  AL    src/main/java/org/apache/commons/exec/launcher/CommandLauncherFactory.java
+  AL    src/main/java/org/apache/commons/exec/launcher/CommandLauncherImpl.java
+  AL    src/main/java/org/apache/commons/exec/launcher/CommandLauncherProxy.java
+  AL    src/main/java/org/apache/commons/exec/launcher/Java13CommandLauncher.java
+  AL    src/main/java/org/apache/commons/exec/launcher/OS2CommandLauncher.java
+  AL    src/main/java/org/apache/commons/exec/launcher/package-info.java
+  AL    src/main/java/org/apache/commons/exec/launcher/VmsCommandLauncher.java
+  AL    src/main/java/org/apache/commons/exec/launcher/WinNTCommandLauncher.java
+  AL    src/main/java/org/apache/commons/exec/LogOutputStream.java
+  AL    src/main/java/org/apache/commons/exec/OS.java
+  AL    src/main/java/org/apache/commons/exec/package-info.java
+  AL    src/main/java/org/apache/commons/exec/ProcessDestroyer.java
+  AL    src/main/java/org/apache/commons/exec/PumpStreamHandler.java
+  AL    src/main/java/org/apache/commons/exec/ShutdownHookProcessDestroyer.java
+  AL    src/main/java/org/apache/commons/exec/StreamPumper.java
+  AL    src/main/java/org/apache/commons/exec/ThreadUtil.java
+  AL    src/main/java/org/apache/commons/exec/TimeoutObserver.java
+  AL    src/main/java/org/apache/commons/exec/util/DebugUtils.java
+  AL    src/main/java/org/apache/commons/exec/util/MapUtils.java
+  AL    src/main/java/org/apache/commons/exec/util/package-info.java
+  AL    src/main/java/org/apache/commons/exec/util/StringUtils.java
+  AL    src/main/java/org/apache/commons/exec/Watchdog.java
+  AL    src/main/javadoc/overview.html
+  AL    src/media/apache-commons-exec.svg
+  AL    src/media/apache-commons.svg
+  N     src/media/readme.txt
+  AL    src/site/apt/commandline.apt
+  AL    src/site/apt/index.apt
+  AL    src/site/apt/technical.apt
+  AL    src/site/apt/tutorial.apt
+  AL    src/site/fml/faq.fml
+  B     src/site/resources/images/apache-commons-exec.png
+  AL    src/site/site.xml
+  AL    src/site/xdoc/download_exec.xml
+  AL    src/site/xdoc/issue-tracking.xml
+  AL    src/site/xdoc/mail-lists.xml
+  AL    src/site/xdoc/testmatrix.xml
+  AL    src/test/bin/testme.bat
+  AL    src/test/bin/testme.dcl
+  AL    src/test/bin/testme.sh
+  AL    src/test/java/org/apache/commons/exec/AbstractExecTest.java
+  AL    src/test/java/org/apache/commons/exec/CommandLineTest.java
+  AL    src/test/java/org/apache/commons/exec/DefaultExecutorTest.java
+  AL    src/test/java/org/apache/commons/exec/environment/EnvironmentUtilsTest.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec33Test.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec34Test.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec36Test.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec41Test.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec44Test.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec49Test.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec57Test.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec60Test.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec62Test.java
+  AL    src/test/java/org/apache/commons/exec/issues/Exec65Test.java
+  AL    src/test/java/org/apache/commons/exec/launcher/AbstractCommandLauncherTest.java
+  AL    src/test/java/org/apache/commons/exec/launcher/CommandLauncherFactoryTest.java
+  AL    src/test/java/org/apache/commons/exec/launcher/CommandLauncherImplTest.java
+  AL    src/test/java/org/apache/commons/exec/launcher/Java13CommandLauncherTest.java
+  AL    src/test/java/org/apache/commons/exec/launcher/OS2CommandLauncherTest.java
+  AL    src/test/java/org/apache/commons/exec/launcher/VmsCommandLauncherTest.java
+  AL    src/test/java/org/apache/commons/exec/launcher/WinNTCommandLauncherTest.java
+  AL    src/test/java/org/apache/commons/exec/LogOutputStreamTest.java
+  AL    src/test/java/org/apache/commons/exec/PumpStreamHandlerTest.java
+  AL    src/test/java/org/apache/commons/exec/StandAloneTest.java
+  AL    src/test/java/org/apache/commons/exec/TestUtil.java
+  AL    src/test/java/org/apache/commons/exec/TutorialTest.java
+  AL    src/test/java/org/apache/commons/exec/util/MapUtilTest.java
+  AL    src/test/java/org/apache/commons/exec/util/StringUtilTest.java
+  AL    src/test/scripts/acrord32.bat
+  AL    src/test/scripts/acrord32.sh
+  AL    src/test/scripts/environment.bat
+  AL    src/test/scripts/environment.dcl
+  AL    src/test/scripts/environment.sh
+  AL    src/test/scripts/error.bat
+  AL    src/test/scripts/error.dcl
+  AL    src/test/scripts/error.sh
+  AL    src/test/scripts/forever.bat
+  AL    src/test/scripts/forever.dcl
+  AL    src/test/scripts/forever.sh
+  AL    src/test/scripts/issues/exec-57-detached.sh
+  AL    src/test/scripts/issues/exec-57-nohup.sh
+  AL    src/test/scripts/issues/exec-62.sh
+  AL    src/test/scripts/issues/exec-65.sh
+  AL    src/test/scripts/ping.bat
+  AL    src/test/scripts/ping.dcl
+  AL    src/test/scripts/ping.sh
+  AL    src/test/scripts/printargs.bat
+  AL    src/test/scripts/printargs.dcl
+  AL    src/test/scripts/printargs.sh
+  AL    src/test/scripts/redirect.sh
+  AL    src/test/scripts/sleep.bat
+  AL    src/test/scripts/sleep.sh
+  AL    src/test/scripts/standalone.sh
+  AL    src/test/scripts/stdin.bat
+  AL    src/test/scripts/stdin.dcl
+  AL    src/test/scripts/stdin.sh
+  AL    src/test/scripts/test.bat
+  AL    src/test/scripts/test.dcl
+  AL    src/test/scripts/test.sh
+ 
+*****************************************************

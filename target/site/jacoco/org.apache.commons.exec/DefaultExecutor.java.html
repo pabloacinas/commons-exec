@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultExecutor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Exec</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.exec</a> &gt; <span class="el_source">DefaultExecutor.java</span></div><h1>DefaultExecutor.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.exec;
+
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.function.Supplier;
+
+import org.apache.commons.exec.launcher.CommandLauncher;
+import org.apache.commons.exec.launcher.CommandLauncherFactory;
+
+/**
+ * The default class to start a subprocess. The implementation allows to
+ * &lt;ul&gt;
+ * &lt;li&gt;set a current working directory for the subprocess&lt;/li&gt;
+ * &lt;li&gt;provide a set of environment variables passed to the subprocess&lt;/li&gt;
+ * &lt;li&gt;capture the subprocess output of stdout and stderr using an ExecuteStreamHandler&lt;/li&gt;
+ * &lt;li&gt;kill long-running processes using an ExecuteWatchdog&lt;/li&gt;
+ * &lt;li&gt;define a set of expected exit values&lt;/li&gt;
+ * &lt;li&gt;terminate any started processes when the main process is terminating using a ProcessDestroyer&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * The following example shows the basic usage:
+ *
+ * &lt;pre&gt;
+ * Executor exec = DefaultExecutor.builder().get();
+ * CommandLine cl = new CommandLine(&quot;ls -l&quot;);
+ * int exitvalue = exec.execute(cl);
+ * &lt;/pre&gt;
+ */
+public class DefaultExecutor implements Executor {
+
+    /**
+     * Constructs a new builder.
+     *
+     * @param &lt;T&gt; The builder type.
+     * @since 1.4.0
+     */
+<span class="fc" id="L57">    public static class Builder&lt;T extends Builder&lt;T&gt;&gt; implements Supplier&lt;DefaultExecutor&gt; {</span>
+
+        private ThreadFactory threadFactory;
+        private ExecuteStreamHandler executeStreamHandler;
+        private File workingDirectory;
+
+        /**
+         * Returns this instance typed as the subclass type {@code T}.
+         * &lt;p&gt;
+         * This is the same as the expression:
+         * &lt;/p&gt;
+         * &lt;pre&gt;
+         * (B) this
+         * &lt;/pre&gt;
+         *
+         * @return this instance typed as the subclass type {@code T}.
+         */
+        @SuppressWarnings(&quot;unchecked&quot;)
+        T asThis() {
+<span class="nc" id="L76">            return (T) this;</span>
+        }
+
+        /**
+         * Creates a new configured DefaultExecutor.
+         *
+         * @return a new configured DefaultExecutor.
+         */
+        @Override
+        public DefaultExecutor get() {
+<span class="fc" id="L86">            return new DefaultExecutor(threadFactory, executeStreamHandler, workingDirectory);</span>
+        }
+
+        ExecuteStreamHandler getExecuteStreamHandler() {
+<span class="nc" id="L90">            return executeStreamHandler;</span>
+        }
+
+        ThreadFactory getThreadFactory() {
+<span class="nc" id="L94">            return threadFactory;</span>
+        }
+
+        File getWorkingDirectory() {
+<span class="nc" id="L98">            return workingDirectory;</span>
+        }
+
+        /**
+         * Sets the PumpStreamHandler.
+         *
+         * @param executeStreamHandler the ExecuteStreamHandler, null resets to the default.
+         * @return {@code this} instance.
+         */
+        public T setExecuteStreamHandler(final ExecuteStreamHandler executeStreamHandler) {
+<span class="nc" id="L108">            this.executeStreamHandler = executeStreamHandler;</span>
+<span class="nc" id="L109">            return asThis();</span>
+        }
+
+        /**
+         * Sets the ThreadFactory.
+         *
+         * @param threadFactory the ThreadFactory, null resets to the default.
+         * @return {@code this} instance.
+         */
+        public T setThreadFactory(final ThreadFactory threadFactory) {
+<span class="nc" id="L119">            this.threadFactory = threadFactory;</span>
+<span class="nc" id="L120">            return asThis();</span>
+        }
+
+        /**
+         * Sets the working directory.
+         *
+         * @param workingDirectory the working directory., null resets to the default.
+         * @return {@code this} instance.
+         */
+        public T setWorkingDirectory(final File workingDirectory) {
+<span class="nc" id="L130">            this.workingDirectory = workingDirectory;</span>
+<span class="nc" id="L131">            return asThis();</span>
+        }
+
+    }
+
+    /**
+     * Creates a new builder.
+     *
+     * @return a new builder.
+     * @since 1.4.0
+     */
+    public static Builder&lt;?&gt; builder() {
+<span class="fc" id="L143">        return new Builder&lt;&gt;();</span>
+    }
+
+    /** Taking care of output and error stream. */
+    private ExecuteStreamHandler executeStreamHandler;
+
+    /** The working directory of the process. */
+    private File workingDirectory;
+
+    /** Monitoring of long running processes. */
+    private ExecuteWatchdog watchdog;
+
+    /** The exit values considered to be successful. */
+    private int[] exitValues;
+
+    /** Launches the command in a new process. */
+    private final CommandLauncher launcher;
+
+    /** Optional cleanup of started processes. */
+    private ProcessDestroyer processDestroyer;
+
+    /** Worker thread for asynchronous execution. */
+    private Thread executorThread;
+
+    /** The first exception being caught to be thrown to the caller. */
+    private IOException exceptionCaught;
+
+    /**
+     * The thread factory.
+     */
+    private final ThreadFactory threadFactory;
+
+    /**
+     * Constructs a default {@code PumpStreamHandler} and sets the working directory of the subprocess to the current working directory.
+     *
+     * The {@code PumpStreamHandler} pumps the output of the subprocess into our {@code System.out} and {@code System.err} to avoid into our {@code System.out}
+     * and {@code System.err} to avoid a blocked or deadlocked subprocess (see {@link Process Process}).
+     *
+     * @deprecated Use {@link Builder#get()}.
+     */
+    @Deprecated
+    public DefaultExecutor() {
+<span class="nc" id="L185">        this(Executors.defaultThreadFactory(), new PumpStreamHandler(), new File(&quot;.&quot;));</span>
+<span class="nc" id="L186">    }</span>
+
+<span class="fc" id="L188">    DefaultExecutor(final ThreadFactory threadFactory, final ExecuteStreamHandler executeStreamHandler, final File workingDirectory) {</span>
+<span class="pc bpc" id="L189" title="1 of 2 branches missed.">        this.threadFactory = threadFactory != null ? threadFactory : Executors.defaultThreadFactory();</span>
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">        this.executeStreamHandler = executeStreamHandler != null ? executeStreamHandler : new PumpStreamHandler();</span>
+<span class="pc bpc" id="L191" title="1 of 2 branches missed.">        this.workingDirectory = workingDirectory != null ? workingDirectory : new File(&quot;.&quot;);</span>
+<span class="fc" id="L192">        this.launcher = CommandLauncherFactory.createVMLauncher();</span>
+<span class="fc" id="L193">        this.exitValues = new int[0];</span>
+<span class="fc" id="L194">    }</span>
+
+    private void checkWorkingDirectory() throws IOException {
+<span class="fc" id="L197">        checkWorkingDirectory(workingDirectory);</span>
+<span class="fc" id="L198">    }</span>
+
+    private void checkWorkingDirectory(final File directory) throws IOException {
+<span class="pc bpc" id="L201" title="1 of 4 branches missed.">        if (directory != null &amp;&amp; !directory.exists()) {</span>
+<span class="fc" id="L202">            throw new IOException(directory + &quot; doesn't exist.&quot;);</span>
+        }
+<span class="fc" id="L204">    }</span>
+
+    /**
+     * Closes the Closeable, remembering any exception.
+     *
+     * @param closeable the {@link Closeable} to close.
+     */
+    private void closeCatch(final Closeable closeable) {
+        try {
+<span class="fc" id="L213">            closeable.close();</span>
+<span class="nc" id="L214">        } catch (final IOException e) {</span>
+<span class="nc" id="L215">            setExceptionCaught(e);</span>
+<span class="fc" id="L216">        }</span>
+<span class="fc" id="L217">    }</span>
+
+    /**
+     * Closes the streams belonging to the given Process.
+     *
+     * @param process the {@link Process}.
+     */
+    @SuppressWarnings(&quot;resource&quot;)
+    private void closeProcessStreams(final Process process) {
+<span class="fc" id="L226">        closeCatch(process.getInputStream());</span>
+<span class="fc" id="L227">        closeCatch(process.getOutputStream());</span>
+<span class="fc" id="L228">        closeCatch(process.getErrorStream());</span>
+<span class="fc" id="L229">    }</span>
+
+    /**
+     * Creates a thread waiting for the result of an asynchronous execution.
+     *
+     * @param runnable the runnable passed to the thread.
+     * @param name     the name of the thread.
+     * @return the thread
+     */
+    protected Thread createThread(final Runnable runnable, final String name) {
+<span class="fc" id="L239">        return ThreadUtil.newThread(threadFactory, runnable, name, false);</span>
+    }
+
+    /**
+     * @see org.apache.commons.exec.Executor#execute(CommandLine)
+     */
+    @Override
+    public int execute(final CommandLine command) throws ExecuteException, IOException {
+<span class="fc" id="L247">        return execute(command, (Map&lt;String, String&gt;) null);</span>
+    }
+
+    /**
+     * @see org.apache.commons.exec.Executor#execute(CommandLine, org.apache.commons.exec.ExecuteResultHandler)
+     */
+    @Override
+    public void execute(final CommandLine command, final ExecuteResultHandler handler) throws ExecuteException, IOException {
+<span class="fc" id="L255">        execute(command, null, handler);</span>
+<span class="fc" id="L256">    }</span>
+
+    /**
+     * @see org.apache.commons.exec.Executor#execute(CommandLine, java.util.Map)
+     */
+    @Override
+    public int execute(final CommandLine command, final Map&lt;String, String&gt; environment) throws ExecuteException, IOException {
+<span class="fc" id="L263">        checkWorkingDirectory();</span>
+<span class="fc" id="L264">        return executeInternal(command, environment, workingDirectory, executeStreamHandler);</span>
+    }
+
+    /**
+     * @see org.apache.commons.exec.Executor#execute(CommandLine, java.util.Map, org.apache.commons.exec.ExecuteResultHandler)
+     */
+    @Override
+    public void execute(final CommandLine command, final Map&lt;String, String&gt; environment, final ExecuteResultHandler handler)
+            throws ExecuteException, IOException {
+<span class="fc" id="L273">        checkWorkingDirectory();</span>
+<span class="fc bfc" id="L274" title="All 2 branches covered.">        if (watchdog != null) {</span>
+<span class="fc" id="L275">            watchdog.setProcessNotStarted();</span>
+        }
+<span class="fc" id="L277">        executorThread = createThread(() -&gt; {</span>
+<span class="fc" id="L278">            int exitValue = INVALID_EXITVALUE;</span>
+            try {
+<span class="fc" id="L280">                exitValue = executeInternal(command, environment, workingDirectory, executeStreamHandler);</span>
+<span class="fc" id="L281">                handler.onProcessComplete(exitValue);</span>
+<span class="fc" id="L282">            } catch (final ExecuteException e) {</span>
+<span class="fc" id="L283">                handler.onProcessFailed(e);</span>
+<span class="fc" id="L284">            } catch (final Exception e) {</span>
+<span class="fc" id="L285">                handler.onProcessFailed(new ExecuteException(&quot;Execution failed&quot;, exitValue, e));</span>
+<span class="fc" id="L286">            }</span>
+<span class="fc" id="L287">        }, &quot;CommonsExecDefaultExecutor&quot;);</span>
+<span class="fc" id="L288">        getExecutorThread().start();</span>
+<span class="fc" id="L289">    }</span>
+
+    /**
+     * Execute an internal process. If the executing thread is interrupted while waiting for the child process to return the child process will be killed.
+     *
+     * @param command          the command to execute.
+     * @param environment      the execution environment.
+     * @param workingDirectory the working directory.
+     * @param streams          process the streams (in, out, err) of the process.
+     * @return the exit code of the process.
+     * @throws IOException executing the process failed.
+     */
+    private int executeInternal(final CommandLine command, final Map&lt;String, String&gt; environment, final File workingDirectory,
+            final ExecuteStreamHandler streams) throws IOException {
+        final Process process;
+<span class="fc" id="L304">        exceptionCaught = null;</span>
+        try {
+<span class="fc" id="L306">            process = launch(command, environment, workingDirectory);</span>
+<span class="fc" id="L307">        } catch (final IOException e) {</span>
+<span class="fc bfc" id="L308" title="All 2 branches covered.">            if (watchdog != null) {</span>
+<span class="fc" id="L309">                watchdog.failedToStart(e);</span>
+            }
+<span class="fc" id="L311">            throw e;</span>
+<span class="fc" id="L312">        }</span>
+        try {
+<span class="fc" id="L314">            setStreams(streams, process);</span>
+<span class="nc" id="L315">        } catch (final IOException e) {</span>
+<span class="nc" id="L316">            process.destroy();</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">            if (watchdog != null) {</span>
+<span class="nc" id="L318">                watchdog.failedToStart(e);</span>
+            }
+<span class="nc" id="L320">            throw e;</span>
+<span class="fc" id="L321">        }</span>
+<span class="fc" id="L322">        streams.start();</span>
+        try {
+            // add the process to the list of those to destroy if the VM exits
+<span class="fc bfc" id="L325" title="All 2 branches covered.">            if (getProcessDestroyer() != null) {</span>
+<span class="fc" id="L326">                getProcessDestroyer().add(process);</span>
+            }
+            // associate the watchdog with the newly created process
+<span class="fc bfc" id="L329" title="All 2 branches covered.">            if (watchdog != null) {</span>
+<span class="fc" id="L330">                watchdog.start(process);</span>
+            }
+<span class="fc" id="L332">            int exitValue = INVALID_EXITVALUE;</span>
+            try {
+<span class="fc" id="L334">                exitValue = process.waitFor();</span>
+<span class="nc" id="L335">            } catch (final InterruptedException e) {</span>
+<span class="nc" id="L336">                process.destroy();</span>
+            } finally {
+                // see https://bugs.sun.com/view_bug.do?bug_id=6420270
+                // see https://issues.apache.org/jira/browse/EXEC-46
+                // Process.waitFor should clear interrupt status when throwing InterruptedException
+                // but we have to do that manually
+<span class="fc" id="L342">                Thread.interrupted();</span>
+            }
+<span class="fc bfc" id="L344" title="All 2 branches covered.">            if (watchdog != null) {</span>
+<span class="fc" id="L345">                watchdog.stop();</span>
+            }
+            try {
+<span class="fc" id="L348">                streams.stop();</span>
+<span class="nc" id="L349">            } catch (final IOException e) {</span>
+<span class="nc" id="L350">                setExceptionCaught(e);</span>
+<span class="fc" id="L351">            }</span>
+<span class="fc" id="L352">            closeProcessStreams(process);</span>
+<span class="pc bpc" id="L353" title="1 of 2 branches missed.">            if (getExceptionCaught() != null) {</span>
+<span class="nc" id="L354">                throw getExceptionCaught();</span>
+            }
+<span class="fc bfc" id="L356" title="All 2 branches covered.">            if (watchdog != null) {</span>
+                try {
+<span class="fc" id="L358">                    watchdog.checkException();</span>
+<span class="nc" id="L359">                } catch (final IOException e) {</span>
+<span class="nc" id="L360">                    throw e;</span>
+<span class="nc" id="L361">                } catch (final Exception e) {</span>
+<span class="nc" id="L362">                    throw new IOException(e);</span>
+<span class="fc" id="L363">                }</span>
+            }
+<span class="fc bfc" id="L365" title="All 2 branches covered.">            if (isFailure(exitValue)) {</span>
+<span class="fc" id="L366">                throw new ExecuteException(&quot;Process exited with an error: &quot; + exitValue, exitValue);</span>
+            }
+<span class="fc" id="L368">            return exitValue;</span>
+        } finally {
+            // remove the process to the list of those to destroy if the VM exits
+<span class="fc bfc" id="L371" title="All 2 branches covered.">            if (getProcessDestroyer() != null) {</span>
+<span class="fc" id="L372">                getProcessDestroyer().remove(process);</span>
+            }
+        }
+    }
+
+    /**
+     * Gets the first IOException being thrown.
+     *
+     * @return the first IOException being caught.
+     */
+    private IOException getExceptionCaught() {
+<span class="fc" id="L383">        return exceptionCaught;</span>
+    }
+
+    /**
+     * Gets the worker thread being used for asynchronous execution.
+     *
+     * @return the worker thread.
+     */
+    protected Thread getExecutorThread() {
+<span class="fc" id="L392">        return executorThread;</span>
+    }
+
+    /**
+     * @see org.apache.commons.exec.Executor#getProcessDestroyer()
+     */
+    @Override
+    public ProcessDestroyer getProcessDestroyer() {
+<span class="fc" id="L400">        return processDestroyer;</span>
+    }
+
+    /**
+     * @see org.apache.commons.exec.Executor#getStreamHandler()
+     */
+    @Override
+    public ExecuteStreamHandler getStreamHandler() {
+<span class="nc" id="L408">        return executeStreamHandler;</span>
+    }
+
+    /**
+     * Gets the thread factory. Z
+     *
+     * @return the thread factory.
+     */
+    ThreadFactory getThreadFactory() {
+<span class="nc" id="L417">        return threadFactory;</span>
+    }
+
+    /**
+     * @see org.apache.commons.exec.Executor#getWatchdog()
+     */
+    @Override
+    public ExecuteWatchdog getWatchdog() {
+<span class="fc" id="L425">        return watchdog;</span>
+    }
+
+    /**
+     * @see org.apache.commons.exec.Executor#getWorkingDirectory()
+     */
+    @Override
+    public File getWorkingDirectory() {
+<span class="fc" id="L433">        return workingDirectory;</span>
+    }
+
+    /** @see org.apache.commons.exec.Executor#isFailure(int) */
+    @Override
+    public boolean isFailure(final int exitValue) {
+<span class="pc bpc" id="L439" title="1 of 2 branches missed.">        if (exitValues == null) {</span>
+<span class="nc" id="L440">            return false;</span>
+        }
+<span class="fc bfc" id="L442" title="All 2 branches covered.">        if (exitValues.length == 0) {</span>
+<span class="fc" id="L443">            return launcher.isFailure(exitValue);</span>
+        }
+<span class="fc bfc" id="L445" title="All 2 branches covered.">        for (final int exitValue2 : exitValues) {</span>
+<span class="fc bfc" id="L446" title="All 2 branches covered.">            if (exitValue2 == exitValue) {</span>
+<span class="fc" id="L447">                return false;</span>
+            }
+        }
+<span class="fc" id="L450">        return true;</span>
+    }
+
+    /**
+     * Creates a process that runs a command.
+     *
+     * @param command          the command to run.
+     * @param env              the environment for the command.
+     * @param workingDirectory the working directory for the command.
+     * @return the process started.
+     * @throws IOException forwarded from the particular launcher used.
+     */
+    protected Process launch(final CommandLine command, final Map&lt;String, String&gt; env, final File workingDirectory) throws IOException {
+<span class="pc bpc" id="L463" title="1 of 2 branches missed.">        if (launcher == null) {</span>
+<span class="nc" id="L464">            throw new IllegalStateException(&quot;CommandLauncher cannot be null&quot;);</span>
+        }
+<span class="fc" id="L466">        checkWorkingDirectory(workingDirectory);</span>
+<span class="fc" id="L467">        return launcher.exec(command, env, workingDirectory);</span>
+    }
+
+    /**
+     * Sets the first IOException thrown.
+     *
+     * @param e the IOException.
+     */
+    private void setExceptionCaught(final IOException e) {
+<span class="nc bnc" id="L476" title="All 2 branches missed.">        if (exceptionCaught == null) {</span>
+<span class="nc" id="L477">            exceptionCaught = e;</span>
+        }
+<span class="nc" id="L479">    }</span>
+
+    /** @see org.apache.commons.exec.Executor#setExitValue(int) */
+    @Override
+    public void setExitValue(final int value) {
+<span class="fc" id="L484">        setExitValues(new int[] { value });</span>
+<span class="fc" id="L485">    }</span>
+
+    /** @see org.apache.commons.exec.Executor#setExitValues(int[]) */
+    @Override
+    public void setExitValues(final int[] values) {
+<span class="pc bpc" id="L490" title="1 of 2 branches missed.">        exitValues = values == null ? null : (int[]) values.clone();</span>
+<span class="fc" id="L491">    }</span>
+
+    /**
+     * @see org.apache.commons.exec.Executor#setProcessDestroyer(ProcessDestroyer)
+     */
+    @Override
+    public void setProcessDestroyer(final ProcessDestroyer processDestroyer) {
+<span class="fc" id="L498">        this.processDestroyer = processDestroyer;</span>
+<span class="fc" id="L499">    }</span>
+
+    /**
+     * @see org.apache.commons.exec.Executor#setStreamHandler(org.apache.commons.exec.ExecuteStreamHandler)
+     */
+    @Override
+    public void setStreamHandler(final ExecuteStreamHandler streamHandler) {
+<span class="fc" id="L506">        this.executeStreamHandler = streamHandler;</span>
+<span class="fc" id="L507">    }</span>
+
+    @SuppressWarnings(&quot;resource&quot;)
+    private void setStreams(final ExecuteStreamHandler streams, final Process process) throws IOException {
+<span class="fc" id="L511">        streams.setProcessInputStream(process.getOutputStream());</span>
+<span class="fc" id="L512">        streams.setProcessOutputStream(process.getInputStream());</span>
+<span class="fc" id="L513">        streams.setProcessErrorStream(process.getErrorStream());</span>
+<span class="fc" id="L514">    }</span>
+
+    /**
+     * @see org.apache.commons.exec.Executor#setWatchdog(org.apache.commons.exec.ExecuteWatchdog)
+     */
+    @Override
+    public void setWatchdog(final ExecuteWatchdog watchdog) {
+<span class="fc" id="L521">        this.watchdog = watchdog;</span>
+<span class="fc" id="L522">    }</span>
+
+    /**
+     * Sets the working directory.
+     *
+     * @see org.apache.commons.exec.Executor#setWorkingDirectory(java.io.File)
+     * @deprecated Use {@link Builder#setWorkingDirectory(File)}.
+     */
+    @Deprecated
+    @Override
+    public void setWorkingDirectory(final File workingDirectory) {
+<span class="fc" id="L533">        this.workingDirectory = workingDirectory;</span>
+<span class="fc" id="L534">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
