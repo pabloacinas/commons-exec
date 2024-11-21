@@ -539,7 +539,15 @@ public class DefaultExecutorTest {
     public void testExecuteWithCustomExitValue1() throws Exception {
         exec.setExitValue(ERROR_STATUS);
         final CommandLine cl = new CommandLine(errorTestScript);
-        exec.execute(cl);
+
+        // Ejecutar el comando
+        int exitCode = exec.execute(cl);
+        
+        // Asegurarse de que el código de salida es el esperado (puedes cambiar ERROR_STATUS por el valor que corresponde)
+        assertEquals("El valor de salida no es el esperado", ERROR_STATUS, exitCode);
+
+        // Si el método `exec.execute()` lanza una excepción, puedes agregar una aserción para verificar que no se haya lanzado:
+        assertDoesNotThrow(() -> exec.execute(cl), "El comando debería ejecutarse sin lanzar excepciones");
     }
 
     /**

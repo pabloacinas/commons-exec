@@ -2,7 +2,6 @@
 *.iml
 *.iws
 *.ipr
-target
 .swp
 .idea
 .classpath
