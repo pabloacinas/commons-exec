@@ -44,33 +44,6 @@ public class Exec49Test {
      *
      * @throws Exception the test failed
      */
-    
-    @Test
-    @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
-    public void testExec49_1() throws Exception {
-        final CommandLine cl = CommandLine.parse("/bin/ls");
-        cl.addArgument("/opt");
-        // redirect stdout/stderr to pipedOutputStream
-        try (PipedOutputStream pipedOutputStream = new PipedOutputStream()) {
-            final PumpStreamHandler psh = new PumpStreamHandler(pipedOutputStream);
-            exec.setStreamHandler(psh);
-            // start an asynchronous process to enable the main thread
-            System.out.println("Preparing to execute process - commandLine=" + cl.toString());
-            final DefaultExecuteResultHandler handler = new DefaultExecuteResultHandler();
-            exec.execute(cl, handler);
-            System.out.println("Process spun off successfully - process=" + cl.getExecutable());
-            try (PipedInputStream pis = new PipedInputStream(pipedOutputStream)) {
-                while (pis.read() >= 0) {
-//                 System.out.println("pis.available() " + pis.available());
-//                 System.out.println("x " + x);
-                }
-            }
-            handler.waitFor(WAIT);
-            handler.getExitValue(); // will fail if process has not finished
-        }
-    }
-    
-    /*
     @Test
     @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
     public void testExec49_1() throws Exception {
@@ -106,41 +79,13 @@ public class Exec49Test {
             assertEquals(0, exitValue, "Process did not complete successfully. Exit value: " + exitValue);
         }
     }
-*/
     /**
      * The issue was detected when trying to capture stdout with a PipedOutputStream and then pass that to a PipedInputStream. The following code will produce
      * the error. The reason for the error is the PipedOutputStream is not being closed correctly, causing the PipedInputStream to break.
      *
      * @throws Exception the test failed
-     */
+     */   
     
- 
-    @Test
-    @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
-    public void testExec49_2() throws Exception {
-        final CommandLine cl = CommandLine.parse("/bin/ls");
-        cl.addArgument("/opt");
-        // redirect only stdout to pipedOutputStream
-        try (PipedOutputStream pipedOutputStream = new PipedOutputStream()) {
-            final PumpStreamHandler psh = new PumpStreamHandler(pipedOutputStream, new ByteArrayOutputStream());
-            exec.setStreamHandler(psh);
-            // start an asynchronous process to enable the main thread
-            System.out.println("Preparing to execute process - commandLine=" + cl.toString());
-            final DefaultExecuteResultHandler handler = new DefaultExecuteResultHandler();
-            exec.execute(cl, handler);
-            System.out.println("Process spun off successfully - process=" + cl.getExecutable());
-            try (PipedInputStream pis = new PipedInputStream(pipedOutputStream)) {
-                while (pis.read() >= 0) {
-//                 System.out.println("pis.available() " + pis.available());
-//                 System.out.println("x " + x);
-                }
-            }
-            handler.waitFor(WAIT);
-            handler.getExitValue(); // will fail if process has not finished
-        }
-    }
-    
-    /*
     @Test
     @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
     public void testExec49_2() throws Exception {
@@ -173,7 +118,7 @@ public class Exec49Test {
             handler.waitFor(WAIT);
             assertEquals(0, handler.getExitValue(), "The process should exit with code 0.");
         }
-    }*/
+    }
 
 
 }
