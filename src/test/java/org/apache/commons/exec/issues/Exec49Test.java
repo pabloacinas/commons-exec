@@ -44,7 +44,7 @@ public class Exec49Test {
      *
      * @throws Exception the test failed
      */
-    /*
+    
     @Test
     @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
     public void testExec49_1() throws Exception {
@@ -69,7 +69,8 @@ public class Exec49Test {
             handler.getExitValue(); // will fail if process has not finished
         }
     }
-    */
+    
+    /*
     @Test
     @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
     public void testExec49_1() throws Exception {
@@ -105,14 +106,14 @@ public class Exec49Test {
             assertEquals(0, exitValue, "Process did not complete successfully. Exit value: " + exitValue);
         }
     }
-
+*/
     /**
      * The issue was detected when trying to capture stdout with a PipedOutputStream and then pass that to a PipedInputStream. The following code will produce
      * the error. The reason for the error is the PipedOutputStream is not being closed correctly, causing the PipedInputStream to break.
      *
      * @throws Exception the test failed
      */
-    /*
+    
  
     @Test
     @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
@@ -138,8 +139,8 @@ public class Exec49Test {
             handler.getExitValue(); // will fail if process has not finished
         }
     }
-    */
     
+    /*
     @Test
     @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
     public void testExec49_2() throws Exception {
@@ -172,7 +173,7 @@ public class Exec49Test {
             handler.waitFor(WAIT);
             assertEquals(0, handler.getExitValue(), "The process should exit with code 0.");
         }
-    }
+    }*/
 
 
 }
