@@ -44,6 +44,7 @@ public class Exec49Test {
      *
      * @throws Exception the test failed
      */
+    /*
     @Test
     @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
     public void testExec49_1() throws Exception {
@@ -68,6 +69,42 @@ public class Exec49Test {
             handler.getExitValue(); // will fail if process has not finished
         }
     }
+    */
+    @Test
+    @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
+    public void testExec49_1() throws Exception {
+        final CommandLine cl = CommandLine.parse("/bin/ls");
+        cl.addArgument("/opt");
+        
+        // redirect stdout/stderr to pipedOutputStream
+        try (PipedOutputStream pipedOutputStream = new PipedOutputStream()) {
+            final PumpStreamHandler psh = new PumpStreamHandler(pipedOutputStream);
+            exec.setStreamHandler(psh);  // Asumiendo que 'exec' está inicializado adecuadamente
+            
+            // start an asynchronous process to enable the main thread
+            System.out.println("Preparing to execute process - commandLine=" + cl.toString());
+            final DefaultExecuteResultHandler handler = new DefaultExecuteResultHandler();
+            exec.execute(cl, handler);
+            System.out.println("Process spun off successfully - process=" + cl.getExecutable());
+            
+            // Read from the piped output stream
+            try (PipedInputStream pis = new PipedInputStream(pipedOutputStream)) {
+                int byteRead;
+                StringBuilder output = new StringBuilder();
+                while ((byteRead = pis.read()) >= 0) {
+                    output.append((char) byteRead);
+                }
+
+                // Assert that the output contains the expected result
+                assertTrue(output.toString().contains(EXPECTED_OUTPUT), "Output does not contain expected result");
+            }
+
+            // Wait for the process to finish and assert that the exit value is 0 (success)
+            handler.waitFor(WAIT);
+            int exitValue = handler.getExitValue();
+            assertEquals(0, exitValue, "Process did not complete successfully. Exit value: " + exitValue);
+        }
+    }
 
     /**
      * The issue was detected when trying to capture stdout with a PipedOutputStream and then pass that to a PipedInputStream. The following code will produce
@@ -75,6 +112,8 @@ public class Exec49Test {
      *
      * @throws Exception the test failed
      */
+    /*
+ 
     @Test
     @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
     public void testExec49_2() throws Exception {
@@ -99,5 +138,41 @@ public class Exec49Test {
             handler.getExitValue(); // will fail if process has not finished
         }
     }
+    */
+    
+    @Test
+    @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
+    public void testExec49_2() throws Exception {
+        final CommandLine cl = CommandLine.parse("/bin/ls");
+        cl.addArgument("/opt");
+
+        // Redirect only stdout to pipedOutputStream
+        try (PipedOutputStream pipedOutputStream = new PipedOutputStream()) {
+            final PumpStreamHandler psh = new PumpStreamHandler(pipedOutputStream, new ByteArrayOutputStream());
+            exec.setStreamHandler(psh);
+
+            // Start an asynchronous process
+            System.out.println("Preparing to execute process - commandLine=" + cl.toString());
+            final DefaultExecuteResultHandler handler = new DefaultExecuteResultHandler();
+            exec.execute(cl, handler);
+
+            System.out.println("Process spun off successfully - process=" + cl.getExecutable());
+
+            try (PipedInputStream pis = new PipedInputStream(pipedOutputStream)) {
+                int bytesRead = 0;
+                while (pis.read() >= 0) {
+                    bytesRead++;
+                }
+
+                // Add assertion to ensure that the process produces output
+                assertTrue(bytesRead > 0, "The process should produce output on stdout.");
+            }
+
+            // Wait for the process to complete and validate its exit value
+            handler.waitFor(WAIT);
+            assertEquals(0, handler.getExitValue(), "The process should exit with code 0.");
+        }
+    }
+
 
 }
