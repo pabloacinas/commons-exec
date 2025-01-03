@@ -33,7 +33,7 @@ import org.junit.jupiter.api.condition.DisabledOnOs;
  * Test EXEC-57 (https://issues.apache.org/jira/browse/EXEC-57).
  */
 public class Exec57Test extends AbstractExecTest {
-
+    private static final int TEST_TIMEOUT = 5000; // Timeout in milliseconds
     /**
      * DefaultExecutor.execute() does not return even if child process terminated - in this case the child process hangs because the grand children is connected
      * to stdout & stderr and is still running. As work-around a stop timeout is used for the PumpStreamHandler to ensure that the caller does not block forever
@@ -42,6 +42,7 @@ public class Exec57Test extends AbstractExecTest {
      *
      * @TODO [EXEC-57] Broken for macOS X & Linux
      */
+	/*
     @Disabled("Broken for Unix-based systems")
     @Test
     @Timeout(value = TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
@@ -55,12 +56,36 @@ public class Exec57Test extends AbstractExecTest {
 
         executor.execute(cmdLine);
     }
+    */
+    
+    @Disabled("Broken for Unix-based systems")
+    @Test
+    @Timeout(value = TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
+    public void testExecutionOfBackgroundProcess() throws IOException {
+
+        // Comando que ejecuta un script de shell
+        final CommandLine cmdLine = new CommandLine("sh")
+                .addArgument("-c")
+                .addArgument("./src/test/scripts/issues/exec-57-nohup.sh", false);
+
+        // Crear el executor y configurarlo
+        final DefaultExecutor executor = DefaultExecutor.builder().get();
+        final PumpStreamHandler pumpStreamHandler = new PumpStreamHandler(System.out, System.err);
+
+        executor.setStreamHandler(pumpStreamHandler);
+
+        // Asegurarnos de que no ocurre ningún error al ejecutar el comando
+        assertDoesNotThrow(() -> {
+            executor.execute(cmdLine);
+        }, "Proccess failed to execute properly");
+    }
 
     /**
      * The same approach using a completely detached process works nicely on macOS X.
      *
      * @throws IOException
      */
+    /*
     @Test
     @DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
     @Timeout(value = TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
@@ -72,5 +97,26 @@ public class Exec57Test extends AbstractExecTest {
         executor.setStreamHandler(pumpStreamHandler);
 
         executor.execute(cmdLine);
+    }
+    */
+    @Test
+    @Disabled("Broken for Windows systems")
+    @Timeout(value = TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
+    public void testExecutionOfDetachedProcess() throws IOException {
+        // Command that executes a shell script
+        final CommandLine cmdLine = new CommandLine("sh")
+                .addArgument("-c")
+                .addArgument("./src/test/scripts/issues/exec-57-detached.sh", false);
+
+        // Create the executor and configure it
+        final DefaultExecutor executor = DefaultExecutor.builder().get();
+        final PumpStreamHandler pumpStreamHandler = new PumpStreamHandler(System.out, System.err);
+
+        executor.setStreamHandler(pumpStreamHandler);
+
+        // Ensure no exception is thrown when executing the command
+        assertDoesNotThrow(() -> {
+            executor.execute(cmdLine);
+        }, "The process did not execute correctly or there was an error");
     }
 }

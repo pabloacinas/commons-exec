@@ -80,5 +80,8 @@ public class Exec62Test {
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     public void testMe() throws Exception {
         execute("exec-62");
+     // Assert that the output file is not empty
+        assertTrue(Files.exists(outputFile), "Output file should exist.");
+        assertTrue(Files.size(outputFile) > 0, "Output file should not be empty.");
     }
 }
